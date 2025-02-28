@@ -6,7 +6,7 @@
                 "name": "break_strategy",
                 "params": {
                     "min_num_cuml": 100,
-                    "min_zz_pct": 0.2,
+                    "min_zz_pct": 0.5,
                     "zz_dev": 2.0,
                     "ma_vol": 10,
                     "vol_ratio_ma": 1.8,
@@ -22,15 +22,15 @@
             {
                 "name": "macd_divergence",
                 "params": {
-                    "delta_macd": 2,
+                    "delta_macd": 1,
                     "delta_price_pct": 0.1,
                     "macd_inputs": {
-                        "fast_len": 8,
-                        "signal": 9,
+                        "fast_len": 9,
+                        "signal": 8,
                         "slow_len": 17
                     },
                     "macd_type": "MACD",
-                    "min_rr": 2,
+                    "min_rr": 0.5,
                     "min_rw_pct": 1,
                     "min_trend_pct": 0.5,
                     "min_updown_ratio": 0.5,
@@ -39,7 +39,7 @@
                     "n_trend_point": 14,
                     "sl_fix_mode": "ADJ_SL",
                     "zz_conv_size": 3,
-                    "zz_type": "ZZ_CONV"
+                    "zz_type": "ZZ_DRC"
                 },
                 "tfs": {
                     "tf": "15m"
