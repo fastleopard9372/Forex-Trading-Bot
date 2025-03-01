@@ -95,6 +95,7 @@ class TradeEngine:
                                     bot_trader.get_symbol_name(), last_kline.iloc[0]["Open time"]
                                 )
                             )
+                            print("--------------")
                             bot_trader.on_kline(tf, last_kline)
                             last_updated_tf = last_kline.iloc[0]["Open time"]
                 self.last_updated_tfs[tf] = last_updated_tf
