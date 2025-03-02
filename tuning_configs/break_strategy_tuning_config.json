@@ -5,9 +5,9 @@
         "params": {
             "up_trend_pct": [2.5, 3],
             "down_trend_pct": [1, 1.5],
-            "down_pct_min": [1.5],
-            "ma_vol": [25],
-            "min_zz_pct": [0.5],
+            "down_pct_min": [1, 1.5, 2],
+            "ma_vol": [10, 25, 30],
+            "min_zz_pct": [0.5, 0.7, 1],
             "vol_ratio_ma": [2.5, 3, 3.5],
             "kline_body_ratio": [3, 4],
             "n_kline_trend": [70, 100, 120],
@@ -24,8 +24,8 @@
         "max_sl_pct": 1.5,
         "volume": 0.01,
         "months": [
-            1, 2
+            1
         ],
-        "year": 2024
+        "year": 2025
     }
 ]

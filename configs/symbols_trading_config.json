@@ -5,12 +5,12 @@
             {
                 "name": "break_strategy",
                 "params": {
-                    "min_num_cuml": 100,
+                    "min_num_cuml": 40,
                     "min_zz_pct": 0.2,
-                    "zz_dev": 2.0,
-                    "ma_vol": 10,
-                    "vol_ratio_ma": 1.8,
-                    "kline_body_ratio": 2.5,
+                    "zz_dev": 0.5,
+                    "ma_vol": 40,
+                    "vol_ratio_ma": 1.5,
+                    "kline_body_ratio": 1.3,
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
@@ -18,88 +18,36 @@
                 },
                 "max_sl_pct": 0.75,
                 "volume": 0.01
-            },
+            }
+        ],
+        "months": [
+            2
+        ],
+        "year": 2025
+    },{
+        "symbol": "USDJPY",
+        "strategies": [
             {
-                "name": "macd_divergence",
+                "name": "break_strategy",
                 "params": {
-                    "delta_macd": 1,
-                    "delta_price_pct": 0.1,
-                    "macd_inputs": {
-                        "fast_len": 12,
-                        "signal": 9,
-                        "slow_len": 26
-                    },
-                    "macd_type": "MACD",
-                    "min_rr": 0.5,
-                    "min_rw_pct": 0.5,
-                    "min_trend_pct": 0.5,
-                    "min_updown_ratio": 0.5,
+                    "min_num_cuml": 100,
                     "min_zz_pct": 0.2,
-                    "n_last_point": 5,
-                    "n_trend_point": 14,
-                    "sl_fix_mode": "ADJ_SL",
-                    "zz_conv_size": 3,
-                    "zz_type": "ZZ_DRC"
+                    "zz_dev": 3.0,
+                    "ma_vol": 40,
+                    "vol_ratio_ma": 2.0,
+                    "kline_body_ratio": 2,
+                    "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
                     "tf": "1m"
                 },
                 "max_sl_pct": 0.75,
                 "volume": 0.01
-            },
-            {
-                "name": "rsi_hidden_divergence",
-                "params": {
-                    "delta_price_pct":1,
-                    "delta_rsi": 2,
-                    "min_rr": 0.5,
-                    "min_rw_pct": 0.5,
-                    "min_trend_pct": 1,
-                    "min_updown_ratio": 0.4,
-                    "min_zz_pct": 0.5,
-                    "n_last_point": 5,
-                    "n_trend_point": 14,
-                    "rsi_len": 10,
-                    "sl_fix_mode": "ADJ_SL",
-                    "zz_conv_size": 3,
-                    "zz_type": "ZZ_DRC"
-                },
-                "tfs": {
-                    "tf": "15m"
-                },
-                "volume": 0.01,
-                "max_sl_pct": 1
-            },
-            {
-                "name": "rsi_regular_divergence",
-                "params": {
-                    "rsi_len": 14,
-                    "delta_rsi": 2,
-                    "delta_price_pct": 0.1,
-                    "n_last_point": 5,
-                    "min_rr": 2,
-                    "min_rw_pct": 0.75,
-                    "min_zz_pct": 0.5,
-                    "ob_rsi": 70,
-                    "os_rsi": 25,
-                    "fib_retr_lv": 1,
-                    "zz_type": "ZZ_DRC",
-                    "zz_conv_size": 3,
-                    "sl_fix_mode": "ADJ_ENTRY",
-                    "n_trend_point": 40
-                },
-                "tfs": {
-                    "tf": "15m"
-                },
-                "volume": 0.01,
-                "max_sl_pct": 0.25
             }
         ],
         "months": [
-            1,
-            2,
-            3
+            2
         ],
-        "year": 2024
+        "year": 2025
     }
 ]

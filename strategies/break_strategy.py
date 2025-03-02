@@ -157,6 +157,7 @@ class BreakStrategy(BaseStrategy):
     def check_signal(self):
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
+        #print(f"kline:{last_kline}, vol_ratio:{self.params["vol_ratio_ma"]}, ma_vol:{self.ma_vol.iloc[-1]} ")
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         idx = 1
@@ -167,6 +168,7 @@ class BreakStrategy(BaseStrategy):
                 change = (zz_point_1.pline.high - zz_point_2.pline.low) / zz_point_2.pline.low
             else:
                 change = (zz_point_2.pline.high - zz_point_1.pline.low) / zz_point_2.pline.high
+            # print(f"ch:{change}, limit:{self.params["zz_dev"] * self.min_zz_ratio}")
             if change > self.params["zz_dev"] * self.min_zz_ratio:
                 break
             idx += 1

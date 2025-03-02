@@ -52,7 +52,8 @@ class MACDDivergence(BaseStrategy):
         else:
             self.macd_type = self.macdhist
         #print(f"--------------------\n{self.macd_type}")
-        self.delta_macd = 0.0001 * self.params["delta_macd"]
+        # self.delta_macd = 0.0001 * self.params["delta_macd"]
+        self.delta_macd = self.params["delta_macd"]
         self.delta_price_ratio = 0.01 * self.params["delta_price_pct"]
         self.min_reward_ratio = 0.01 * self.params["min_rw_pct"]
         self.min_zz_ratio = 0.01 * self.params["min_zz_pct"]
@@ -319,7 +320,7 @@ class MACDDivergence(BaseStrategy):
                 if self.macd_type.iloc[low_1_idx] < self.macd_type.iloc[low_2_idx] - self.delta_macd:
                     if self.macd_type.iloc[low_1_idx] * self.macd_type.iloc[low_2_idx] < 0:
                         continue
-                    if not self.check_macd(self.macd_type.iloc[low_1_idx : low_2_idx + 1], above=True):
+                    if not self.check_macd(self.macd_type.iloc[low_1_idx : low_2_idx + 1], above=False):
                         continue
                     sl = max(chart.iloc[last_zz_point.pidx :]["High"].max(), last_zz_point.pline.high)
                     sl = (1 + self.delta_price_ratio) * sl
