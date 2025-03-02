@@ -7,9 +7,9 @@
                 "params": {
                     "min_num_cuml": 20,
                     "min_zz_pct": 0.2,
-                    "zz_dev": 1.0,
-                    "ma_vol": 10,
-                    "vol_ratio_ma": 1.0,
+                    "zz_dev": 0.5,
+                    "ma_vol": 20,
+                    "vol_ratio_ma": 1.2,
                     "kline_body_ratio": 2.0,
                     "sl_fix_mode": "ADJ_SL"
                 },
@@ -21,11 +21,10 @@
             }
         ],
         "months": [
-            2
+            1,2
         ],
         "year": 2025
-    }
-    ,{
+    },{
         "symbol": "USDJPY",
         "strategies": [
             {
@@ -47,7 +46,7 @@
             }
         ],
         "months": [
-            2
+            1,2
         ],
         "year": 2025
     }

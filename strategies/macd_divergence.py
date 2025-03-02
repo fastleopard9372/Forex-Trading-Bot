@@ -52,7 +52,8 @@ class MACDDivergence(BaseStrategy):
         else:
             self.macd_type = self.macdhist
         #print(f"--------------------\n{self.macd_type}")
-        self.delta_macd = 0.01 * self.params["delta_macd"]
+        # self.delta_macd = 0.0001 * self.params["delta_macd"]
+        self.delta_macd = self.params["delta_macd"]
         self.delta_price_ratio = 0.01 * self.params["delta_price_pct"]
         self.min_reward_ratio = 0.01 * self.params["min_rw_pct"]
         self.min_zz_ratio = 0.01 * self.params["min_zz_pct"]
@@ -149,6 +150,8 @@ class MACDDivergence(BaseStrategy):
         slope, intercept = get_line_coffs((idxs.iloc[0], macd.iloc[0]), (idxs.iloc[-1], macd.iloc[-1]))
         b_1 = macd.iloc[1:-1]
         b_0 = idxs.iloc[1:-1]
+        #print("slope*b_0 :{}, intercept :{} , b_0 :{}, b_1 :{}".format(slope*b_0,intercept,b_0,b_1))
+        #print("a: {}, b: {}".format((slope * b_0 + intercept - self.delta_macd), b_1))
         if above:
             return (slope * b_0 + intercept - self.delta_macd <= b_1).all()
         return (slope * b_0 + intercept + self.delta_macd >= b_1).all()
@@ -223,6 +226,7 @@ class MACDDivergence(BaseStrategy):
                 max_high_idx = get_next_zz_point(zz_point)
                 low_1_idx = self.macd_type.iloc[zz_point.pidx : max_high_idx].idxmin()
                 low_2_idx = self.macd_type.iloc[self.zz_points[-2].pidx : len(chart)].idxmin()
+                #print("POKE::: low_1: {}, low_2: {}, macd: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.delta_macd))
                 if self.macd_type.iloc[low_1_idx] > self.macd_type.iloc[low_2_idx] + self.delta_macd:
                     if self.macd_type.iloc[low_1_idx] * self.macd_type.iloc[low_2_idx] < 0:
                         continue
@@ -245,6 +249,7 @@ class MACDDivergence(BaseStrategy):
                         sl=sl,
                         status=OrderStatus.FILLED,
                     )
+                    
                     order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
                     if order is None:
                         continue
@@ -310,6 +315,8 @@ class MACDDivergence(BaseStrategy):
                 min_low_idx = get_next_zz_point(zz_point)
                 low_1_idx = self.macd_type.iloc[zz_point.pidx : min_low_idx].idxmax()
                 low_2_idx = self.macd_type.iloc[self.zz_points[-2].pidx : len(chart)].idxmax()
+                #print("PEAK::: low_1: {}, low_2: {}, macd: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.delta_macd))
+                
                 if self.macd_type.iloc[low_1_idx] < self.macd_type.iloc[low_2_idx] - self.delta_macd:
                     if self.macd_type.iloc[low_1_idx] * self.macd_type.iloc[low_2_idx] < 0:
                         continue
@@ -333,6 +340,9 @@ class MACDDivergence(BaseStrategy):
                         status=OrderStatus.FILLED,
                     )
                     order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
+                    #print("{}; {};{}".format(order.rr >= self.params["min_rr"],order.reward_ratio > self.min_reward_ratio,order.is_valid()))
+                    #print(f"rr:{order.rr} min:{self.params["min_rr"]}")
+                    #print(f"rw:{order.reward_ratio} min_rw:{self.min_reward_ratio}")
                     if order is None:
                         continue
                     if (

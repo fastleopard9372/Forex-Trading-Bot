@@ -5,10 +5,10 @@
             {
                 "name": "break_strategy",
                 "params": {
-                    "min_num_cuml": 10,
-                    "min_zz_pct": 0.5,
-                    "zz_dev": 2,
-                    "ma_vol": 25,
+                    "min_num_cuml": 80,
+                    "min_zz_pct": 0.4,
+                    "zz_dev": 1.5,
+                    "ma_vol": 15,
                     "vol_ratio_ma": 1.8,
                     "kline_body_ratio": 2.5,
                     "sl_fix_mode": "ADJ_SL"

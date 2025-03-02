@@ -128,6 +128,8 @@ class RSIDivergence(BaseStrategy):
         slope, intercept = get_line_coffs((idxs.iloc[0], rsi.iloc[0]), (idxs.iloc[-1], rsi.iloc[-1]))
         b_1 = rsi.iloc[1:-1]
         b_0 = idxs.iloc[1:-1]
+        #print(f"i:{slope}")
+        # print(f"a:{slope * b_0 + intercept - self.delta_rsi}, b{b_1}")
         if above:
             return (slope * b_0 + intercept - self.delta_rsi <= b_1).all()
         return (slope * b_0 + intercept + self.delta_rsi >= b_1).all()
@@ -168,6 +170,7 @@ class RSIDivergence(BaseStrategy):
                 self.checked_pidx.append(last_zz_point.pidx)
                 return
             # check updown_ratio
+            #print(f"up:{up_close_ratio} min_up:{self.params["min_updown_ratio"]}")
             if up_close_ratio > self.params["min_updown_ratio"]:
                 return
             # get n_last_point poke points lower low
@@ -185,6 +188,9 @@ class RSIDivergence(BaseStrategy):
             for valid_point_idx in valid_points_idx:
                 zz_point = n_zz_points[valid_point_idx]
                 if self.rsi[zz_point.pidx] > self.rsi[last_zz_point.pidx] + self.delta_rsi:
+                    # print(f"dpr:{self.delta_price_ratio}, v1:{last_zz_point.pline.low - zz_point.pline.low}, v2:{self.delta_price_ratio * zz_point.pline.low}")
+                    # print((last_zz_point.pline.low - zz_point.pline.low) < self.delta_price_ratio * zz_point.pline.low)
+                    # print(f"F:{self.check_rsi(self.rsi.iloc[zz_point.pidx : last_zz_point.pidx + 1])}")
                     if (last_zz_point.pline.low - zz_point.pline.low) < self.delta_price_ratio * zz_point.pline.low:
                         continue
                     if not self.check_rsi(self.rsi.iloc[zz_point.pidx : last_zz_point.pidx + 1], above=True):
@@ -201,6 +207,10 @@ class RSIDivergence(BaseStrategy):
                         status=OrderStatus.FILLED,
                     )
                     order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
+
+
+                    print(f"rr:{order.rr}, min_rr:{self.params["min_rr"]}")
+                    print(f"reward_ratio:{order.reward_ratio}, min_reward_ratio:{self.min_reward_ratio}")
                     if order is None:
                         continue
                     if (

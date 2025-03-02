@@ -1,2 +1,8 @@
 py main.py --mode test --exch mt5 --exch_cfg_file configs/exchange_config.json --sym_cfg_file configs/symbols_trading_config.json --data_dir D:\MT5_Data
 
+
+py main.py --mode live --exch mt5 --exch_cfg_file configs/exchange_config.json --sym_cfg_file configs/symbols_trading_config.json
+
+
+py tuning.py --sym_cfg_file tuning_configs/break_strategy_tuning_config.json --data_dir d:/MT5_Data
+

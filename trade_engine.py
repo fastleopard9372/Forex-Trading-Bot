@@ -47,7 +47,7 @@ class TradeEngine:
             tfs_chart = {}
             for tf in bot_trader.get_required_tfs():
                 chart_df = self.mt5_api.klines(symbol_cfg["symbol"], tf, limit=NUM_KLINE_INIT + 1)
-                print(F"chart_df:\n {chart_df}")
+                #print(F"chart_df:\n {chart_df}")
                 chart_df = chart_df[:-1]
                 tfs_chart[tf] = chart_df
                 bot_logger.info(
