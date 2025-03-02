@@ -159,3 +159,36 @@
         ],
         "year": 2025
     }
+
+
+
+
+
+
+
+    ,{
+        "symbol": "USDJPY",
+        "strategies": [
+            {
+                "name": "break_strategy",
+                "params": {
+                    "min_num_cuml": 100,
+                    "min_zz_pct": 0.2,
+                    "zz_dev": 3.0,
+                    "ma_vol": 40,
+                    "vol_ratio_ma": 2.0,
+                    "kline_body_ratio": 2,
+                    "sl_fix_mode": "ADJ_SL"
+                },
+                "tfs": {
+                    "tf": "1m"
+                },
+                "max_sl_pct": 0.75,
+                "volume": 0.01
+            }
+        ],
+        "months": [
+            2
+        ],
+        "year": 2025
+    }
