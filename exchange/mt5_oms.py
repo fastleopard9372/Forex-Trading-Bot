@@ -196,6 +196,10 @@ class MT5OMS:
             if result:
                 total_deals.extend([res._asdict() for res in result])
         return pd.DataFrame(total_deals)
+    
+    def get_income_history(self, from_time,to_time):
+        result = self.mt5_api.history_deals_get(from_time, to_time)
+        return pd.DataFrame(result)
 
     def get_trades(self):
         return self.closed_trades, self.active_trades

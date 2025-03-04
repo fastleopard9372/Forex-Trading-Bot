@@ -35,11 +35,14 @@ if __name__ == "__main__":
 
     if not os.path.isdir(os.environ["DEBUG_DIR"]):
         os.mkdir(os.environ["DEBUG_DIR"])
-
+        
     if args.mode == "live":
         trade_engine = TradeEngine(args.exch, args.exch_cfg_file, args.sym_cfg_file)
         if trade_engine.init():
-            trade_engine.start()
+            # trade_engine.start()
+            from_date=datetime(2025,1,1)
+            to_date=datetime.now()
+            trade_engine.log_income_history(from_date, to_date)
             try:
                 while True:
                     time.sleep(1)

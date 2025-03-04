@@ -61,3 +61,6 @@ class MT5API:
 
     def history_deals_get(self, position_id):
         return mt5.history_deals_get(position=position_id)
+    
+    def history_deals_get(self, from_time, to_time):
+        return mt5.history_deals_get(from_time, to_time)
