@@ -9,6 +9,7 @@ class ExchangeLoader:
     }
 
     def __init__(self, exc_cfg_file):
+        # self.exchange_configs = exc_cfg_file
         with open(exc_cfg_file) as f:
             self.exchange_configs = json.load(f)
 
@@ -19,6 +20,7 @@ class ExchangeLoader:
 
     def __load_exchange__(self, exchange_name):
         exchange_name_config = self.exchange_configs[exchange_name]
+        print(exchange_name_config)
         return globals()[ExchangeLoader.__exchanges_map__[exchange_name]](exchange_name_config)
 
 

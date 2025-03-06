@@ -1,18 +1,20 @@
 import os
-import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import argparse
 import logging
 import logging.config
+import time
 from trade_engine import TradeEngine
 from backtest import BackTest
 from utils import datetime_to_filename
 from flask_marshmallow import Marshmallow
+import json
 
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, redirect, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
+from flask_session import Session 
 
 
 app = Flask(__name__)
@@ -20,6 +22,10 @@ CORS(app)
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost/trading'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = "sdlfjowehfwler2339423!*!l4"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app) 
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
@@ -51,15 +57,11 @@ class Strategies(db.Model):
 class StrategySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Strategies
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
 
-parser = argparse.ArgumentParser(description="Monn auto trading bot")
-# parser.add_argument("--mode", required=True, type=str, choices=["live", "test"])
-# parser.add_argument("--exch", required=True, type=str)
-# parser.add_argument("--data_dir", required=False, type=str)
-# parser.add_argument("--exch_cfg_file", required=True, type=str)
-# parser.add_argument("--sym_cfg_file", required=True, type=str)
-# args = parser.parse_args()
-
+parser = None
 os.environ["DEBUG_DIR"] = "debug"
 os.environ["LOG_DIR"] = "logs"
 # config_logging(args.exch)
@@ -83,12 +85,14 @@ with app.app_context():
 #     print(history)
 #     return render_template('index.html', trades=history)
 
+trade_engine = None
+
 def strategies():
     strategies = Strategies.query.all()
     strategy_list = []
     for strategy in strategies:
         strategy_list.append({
-            "symbol": "USDJPY",
+            "symbol": strategy.symbol,
             "strategies": [
                 {
                     "name": "break_strategy",
@@ -115,13 +119,23 @@ def strategies():
         })
     return strategy_list
 
-def user():
-    user = User.query.all().first()
-    return user
+def get_count(tf, limit):
+    tf[-1:] + tf[:-1]
+    tm = len(tf[:-1])
+    count = limit
+    if tf[-1:].upper()== "H":
+        count = count * 60
+    elif tf[-1:].upper()== "D":
+        count = count * 60* 24
+    elif tf[-1:].upper()== "W":
+        count = count * 60* 24 * 7
+    count = count * tm
+    return count
 
 @app.route('/')
 def home():
-    return jsonify({"message": "success"}), 200
+    print("home")
+    return render_template('index.html')
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -158,11 +172,27 @@ def signin():
     if not user:
         return jsonify({"message": "User  not found!"}), 404
 
+    User_schema = UserSchema(many=False) 
+    session["user"] = User_schema.dump(user)
+
     if not bcrypt.check_password_hash(user.password, password):
         return jsonify({"message": "Invalid password!"}), 401
-
-    return jsonify({"message": "Sign-in successful!","data":user}), 200
-
+    
+    user_data = User.query.filter_by(account=user.account).first()
+    exc_cfg = {
+        "mt5": {
+            "account": int(user_data.account),
+            "server": user_data.server
+        }
+    }
+    global trade_engine
+    trade_engine = TradeEngine("mt5", exc_cfg, strategies())
+    
+    if trade_engine.init():
+        return jsonify({"message":"success","data":User_schema.dump(data)}), 200
+    else:
+        return jsonify({"message":"error"}), 400
+   
 @app.route('/get_strategies', methods=['POST'])
 def get_strategies():
     data = Strategies.query.all()
@@ -201,29 +231,88 @@ def update_strategy():
     strategy_schema = StrategySchema(many=True) 
     return jsonify({"message":"success","data":strategy_schema.dump(data)}), 200
 
-@app.route('/get_trade_history')
-def get_trade_history():
-    trade_engine = TradeEngine("live", user(), strategies())
-    if trade_engine.init():
-        from_date=datetime(2025,1,1)
-        to_date=datetime.now()
-        data = trade_engine.log_income_history(from_date, to_date)
-        return jsonify({"message":"success","data":data}), 200
-        # trade_engine.start()
-        # try:
-        #     while True:
-        #         time.sleep(1)
-        # except (KeyboardInterrupt, SystemExit):
-        #     trade_engine.stop()
-        #     trade_engine.summary_trade_result()
-        #     trade_engine.log_all_trades()
-        #     time.sleep(3)  # Wait for exchange return income
-        #     trade_engine.log_income_history()
-    else:
-        return jsonify({"message":"error"}), 400
-@app.route('/')
-def trade_engin_start():
-    str
+@app.route('/get_mt5_data')
+def get_mt5_data():
+    # user_data = session.get("user")
+    # print(user_data)
+    # if not session.get('user'):
+    #     return jsonify({"message":"Authentication Error!"}), 401
+    # user_data = User.query.filter_by(account="90610739").first()
     
+    to_date = datetime.now()
+    tf = "1m"
+    count = 75
+    
+    from_date = datetime.now() - timedelta(minutes=get_count(tf, count))
+    history = trade_engine.log_income_history("EURUSD", datetime(2022,1,1), to_date)
+    
+    # total_profit = total_history["profit"].sum()
+    # today = (datetime.now()+timedelta(seconds=-time.timezone)).date()
+    # today_profit = total_history[total_history["time"].dt.date == today]["profit"].sum()
+
+    # first_day_of_month = datetime(today.year, today.month, 1)
+    # month_profit = total_history[total_history["time"] >= first_day_of_month]["profit"].sum()
+
+
+    kline = trade_engine.klinesCount("EURUSD", tf, to_date, count)
+    history_data = [] 
+    kline_data = []
+    if len(history) > 0:
+        history_data = history.to_json(orient="records")
+    if len(kline) > 0:
+        kline_data = kline.to_json(orient="records")
+
+    data = {
+        "kline" : kline_data,
+        "history" : history_data,
+        "current_time" : datetime.now(),
+    }
+    return jsonify({"message":"success","data":data}), 200
+    # trade_engine.start()
+    # try:
+    #     while True:
+    #         time.sleep(1)
+    # except (KeyboardInterrupt, SystemExit):
+    #     trade_engine.stop()
+    #     trade_engine.summary_trade_result()
+    #     trade_engine.log_all_trades()
+    #     time.sleep(3)  # Wait for exchange return income
+    #     trade_engine.log_income_history()
+
+@app.route('/trade_start', methods=['POST'])
+def trade_start():
+    trade_engine.start()
+    return jsonify({"message":"trading is started"}), 200
+
+@app.route('/trade_stop', methods=['POST'])
+def trade_stop():
+    trade_engine.stop()
+    trade_engine.summary_trade_result()
+    trade_engine.log_all_trades()
+    time.sleep(3)  # Wait for exchange return income
+    trade_engine.log_income_history()
+    return jsonify({"message":"trading is started"}), 200
+
+@app.route('/backtest_start', methods=['POST'])
+def backtest_start():
+    global parser
+    parser = argparse.ArgumentParser(description="Monn auto trading bot")
+    parser.add_argument("--mode", required=True, type=str, choices=["live", "test"])
+    parser.add_argument("--exch", required=True, type=str)
+    parser.add_argument("--data_dir", required=False, type=str)
+    parser.add_argument("--exch_cfg_file", required=True, type=str)
+    parser.add_argument("--sym_cfg_file", required=True, type=str)
+    args = parser.parse_args()
+    start_time = time.time()
+    backtest_engine = BackTest(args.exch, args.sym_cfg_file, args.data_dir)
+    backtest_engine.start()
+    backtest_engine.summary_trade_result()
+    backtest_engine.stop()
+    end_time = time.time()
+    print("|--------------------------------")
+    print(" Backtest finished, time: {:.4f}".format(end_time - start_time))
+    print("|--------------------------------")
+
 if __name__ == '__main__':
+    trade_engine = TradeEngine("mt5", {}, {})
     app.run(debug=True)

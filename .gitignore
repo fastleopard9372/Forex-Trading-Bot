@@ -104,6 +104,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+flask_session
 env/
 venv/
 ENV/
