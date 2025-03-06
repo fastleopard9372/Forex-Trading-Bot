@@ -69,7 +69,7 @@ class MT5OMS:
         order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
 
         trade = Trade(order, volume)
-        bot_logger.info("   [*] create trade, trade_id: {}".format(trade.trade_id))
+        print("   [*] create trade, trade_id: {}".format(trade.trade_id))
         order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)
         trade.main_order_params = order_tpl.get_main_order()
         trade.close_order_params = order_tpl.get_close_order()
@@ -86,11 +86,11 @@ class MT5OMS:
         trade.main_order = result_dict
         trade.close_order_params["position"] = result_dict["order"]
         if result.retcode == mt5.TRADE_RETCODE_DONE:
-            bot_logger.info("       [+] create main order success")
+            print("       [+] create main order success")
             self.active_trades[trade.trade_id] = trade
             return trade.trade_id
         else:
-            bot_logger.info("       [+] create main order failed: {}".format(result_dict))
+            print("       [+] create main order failed: {}".format(result_dict))
             self.closed_trades[trade.trade_id] = trade
             return None
 
@@ -98,10 +98,10 @@ class MT5OMS:
         return self.active_trades.get(trade_id)
 
     def close_trade(self, trade_id):
-        bot_logger.debug("  [*] close trade: {}".format(trade_id))
+        print("  [*] close trade: {}".format(trade_id))
         trade = self.get_trade(trade_id)
         if trade is None:
-            bot_logger.debug("  [*] trade: {} not exist or already closed".format(trade_id))
+            print("  [*] trade: {} not exist or already closed".format(trade_id))
             return
         # check if order is type limit and pending
         result = mt5.orders_get(ticket=trade.main_order["order"])
@@ -115,9 +115,9 @@ class MT5OMS:
                 }
                 result = self.mt5_api.place_order(request)
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
-                    bot_logger.info("       [+] close limit trade success")
+                    print("       [+] close limit trade success")
                 else:
-                    bot_logger.info("       [+] close limit trade failed: {}".format(result._asdict()))
+                    print("       [+] close limit trade failed: {}".format(result._asdict()))
         else:
             # update ask/bid price for market order
             if trade.order.side == OrderSide.BUY:
@@ -129,17 +129,17 @@ class MT5OMS:
             result_dict["request"] = result_dict["request"]._asdict()
             trade.close_order = result_dict
             if result.retcode == mt5.TRADE_RETCODE_DONE:
-                bot_logger.info("       [+] close trade success")
+                print("       [+] close trade success")
             else:
-                bot_logger.info("       [+] close trade failed: {}".format(result_dict))
+                print("       [+] close trade failed: {}".format(result_dict))
         self.closed_trades[trade_id] = self.active_trades[trade_id]
         del self.active_trades[trade_id]
 
     def adjust_sl(self, trade_id, sl):
-        bot_logger.debug("  [+] adjust sl, trade: {}, sl: {}".format(trade_id, sl))
+        print("  [+] adjust sl, trade: {}, sl: {}".format(trade_id, sl))
         trade = self.get_trade(trade_id)
         if trade is None:
-            bot_logger.debug("  [*] trade: {} not exist or already closed".format(trade_id))
+            print("  [*] trade: {} not exist or already closed".format(trade_id))
             return
         sl = self.mt5_api.round_price(trade.order["symbol"], sl)
         params = {
@@ -153,16 +153,16 @@ class MT5OMS:
 
         result = self.mt5_api.place_order(params)
         if result.retcode == mt5.TRADE_RETCODE_DONE:
-            bot_logger.info("       [+] adjust sl success")
+            print("       [+] adjust sl success")
             trade.order.sl = sl
         else:
-            bot_logger.info("       [+] adjust sl failed")
+            print("       [+] adjust sl failed")
 
     def adjust_tp(self, trade_id, tp):
-        bot_logger.debug("  [+] adjust tp, trade: {}, tp: {}".format(trade_id, tp))
+        print("  [+] adjust tp, trade: {}, tp: {}".format(trade_id, tp))
         trade = self.get_trade(trade_id)
         if trade is None:
-            bot_logger.debug("  [*] trade: {} not exist or already closed".format(trade_id))
+            print("  [*] trade: {} not exist or already closed".format(trade_id))
             return
         tp = self.mt5_api.round_price(trade.order["symbol"], tp)
         params = {
@@ -176,17 +176,17 @@ class MT5OMS:
 
         result = self.mt5_api.place_order(params)
         if result.retcode == mt5.TRADE_RETCODE_DONE:
-            bot_logger.info("       [+] adjust tp success")
+            print("       [+] adjust tp success")
             trade.order.tp = tp
         else:
-            bot_logger.info("       [+] adjust tp failed")
+            print("       [+] adjust tp failed")
 
     def monitor_trades(self):
         if len(self.active_trades) == 0:
             return
 
     def close_all_trade(self):
-        bot_logger.debug("  [*] close all trade")
+        print("  [*] close all trade")
         for trade_id in list(self.active_trades.keys()):
             self.close_trade(trade_id)
 
