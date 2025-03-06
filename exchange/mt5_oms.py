@@ -1,5 +1,6 @@
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 import logging
 from trade import Trade
 from order import Order, OrderType, OrderSide, OrderType
@@ -197,9 +198,23 @@ class MT5OMS:
                 total_deals.extend([res._asdict() for res in result])
         return pd.DataFrame(total_deals)
     
-    def get_income_history(self, from_time,to_time):
-        result = self.mt5_api.history_deals_get(from_time, to_time)
-        return pd.DataFrame(result)
+    def get_income_history(self, from_time,to_time, group="*"):
+        from_time = from_time + timedelta(seconds=-time.timezone)
+        to_time = to_time + timedelta(seconds=-time.timezone)
+        result = self.mt5_api.history_deals_get(from_time, to_time, group=group)
+        df=[]
+        if result:
+            df=pd.DataFrame(list(result),columns=result[0]._asdict().keys())
+            df["time"] += -time.timezone
+            df['time'] = pd.to_datetime(df['time'], unit='s')
+            df = df[['symbol', 'type', 'price', 'volume', 'profit','time','time_msc']]
+        return df
+    
+    def klinesDate(self, symbol: str, interval:str, from_date: datetime, to_date: datetime): 
+        return self.mt5_api.klinesDate(symbol, interval, from_date, to_date)
+    
+    def klinesCount(self, symbol: str, interval:str, from_date: datetime, limit: int): 
+        return self.mt5_api.klinesCount(symbol, interval, from_date, limit)
 
     def get_trades(self):
         return self.closed_trades, self.active_trades

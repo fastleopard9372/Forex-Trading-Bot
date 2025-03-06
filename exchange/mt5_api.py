@@ -23,9 +23,8 @@ class MT5API:
         authorized = mt5.login(self.config["account"], server=self.config["server"])
         if authorized:
             bot_logger.info("[+] Login success, account info: ")
-            account_info = mt5.account_info()._asdict()
-            
-            bot_logger.info(account_info)
+            self.account_info = mt5.account_info()._asdict()
+            bot_logger.info(self.account_info)
             return True
         else:
             bot_logger.info("[-] Login failed, check account infor")
@@ -55,6 +54,34 @@ class MT5API:
         df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
         df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
         return df
+    
+    def klinesDate(self, symbol: str, interval:str, from_date: datetime, to_date: datetime): 
+        from_date = from_date + timedelta(seconds=-time.timezone)
+        to_date = to_date + timedelta(seconds=-time.timezone)
+
+        symbol_rates = mt5.copy_rates_range(
+            symbol, getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper()), from_date, to_date
+        )
+        df = pd.DataFrame(symbol_rates)
+        if len(df)==0: return False
+        df["time"] += -time.timezone
+        df["time"] = pd.to_datetime(df["time"], unit="s")
+        df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
+        df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
+        return df
+    
+    def klinesCount(self, symbol: str, interval:str, from_date: datetime, limit: int): 
+        from_date = from_date + timedelta(seconds=-time.timezone)
+        symbol_rates = mt5.copy_rates_from(
+            symbol, getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper()), from_date, limit
+        )
+        df = pd.DataFrame(symbol_rates)
+        if len(df)==0: return False
+        df["time"] += -time.timezone
+        df["time"] = pd.to_datetime(df["time"], unit="s")
+        df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
+        df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
+        return df
 
     def place_order(self, params):
         return mt5.order_send(params)
@@ -62,5 +89,5 @@ class MT5API:
     def history_deals_get(self, position_id):
         return mt5.history_deals_get(position=position_id)
     
-    def history_deals_get(self, from_time, to_time):
-        return mt5.history_deals_get(from_time, to_time)
+    def history_deals_get(self, from_time, to_time, group="*"):
+        return mt5.history_deals_get(from_time, to_time, group = group)
