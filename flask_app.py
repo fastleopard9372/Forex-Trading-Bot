@@ -61,14 +61,7 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
 
-parser = argparse.ArgumentParser(description="Monn auto trading bot")
-# parser.add_argument("--mode", required=True, type=str, choices=["live", "test"])
-# parser.add_argument("--exch", required=True, type=str)
-# parser.add_argument("--data_dir", required=False, type=str)
-# parser.add_argument("--exch_cfg_file", required=True, type=str)
-# parser.add_argument("--sym_cfg_file", required=True, type=str)
-# args = parser.parse_args()
-
+parser = None
 os.environ["DEBUG_DIR"] = "debug"
 os.environ["LOG_DIR"] = "logs"
 # config_logging(args.exch)
@@ -99,7 +92,7 @@ def strategies():
     strategy_list = []
     for strategy in strategies:
         strategy_list.append({
-            "symbol": "USDJPY",
+            "symbol": strategy.symbol,
             "strategies": [
                 {
                     "name": "break_strategy",
@@ -289,9 +282,36 @@ def get_mt5_data():
 @app.route('/trade_start', methods=['POST'])
 def trade_start():
     trade_engine.start()
-    while True:
-        time.sleep(1)
-    return jsonify({"message":"success"}), 200
+    return jsonify({"message":"trading is started"}), 200
+
+@app.route('/trade_stop', methods=['POST'])
+def trade_stop():
+    trade_engine.stop()
+    trade_engine.summary_trade_result()
+    trade_engine.log_all_trades()
+    time.sleep(3)  # Wait for exchange return income
+    trade_engine.log_income_history()
+    return jsonify({"message":"trading is started"}), 200
+
+@app.route('/backtest_start', methods=['POST'])
+def backtest_start():
+    global parser
+    parser = argparse.ArgumentParser(description="Monn auto trading bot")
+    parser.add_argument("--mode", required=True, type=str, choices=["live", "test"])
+    parser.add_argument("--exch", required=True, type=str)
+    parser.add_argument("--data_dir", required=False, type=str)
+    parser.add_argument("--exch_cfg_file", required=True, type=str)
+    parser.add_argument("--sym_cfg_file", required=True, type=str)
+    args = parser.parse_args()
+    start_time = time.time()
+    backtest_engine = BackTest(args.exch, args.sym_cfg_file, args.data_dir)
+    backtest_engine.start()
+    backtest_engine.summary_trade_result()
+    backtest_engine.stop()
+    end_time = time.time()
+    print("|--------------------------------")
+    print(" Backtest finished, time: {:.4f}".format(end_time - start_time))
+    print("|--------------------------------")
 
 if __name__ == '__main__':
     trade_engine = TradeEngine("mt5", {}, {})

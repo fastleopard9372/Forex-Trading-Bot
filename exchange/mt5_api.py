@@ -24,6 +24,8 @@ class MT5API:
         if authorized:
             bot_logger.info("[+] Login success, account info: ")
             self.account_info = mt5.account_info()._asdict()
+            if not mt5.account_info().trade_allowed:
+                print("AutoTrading is disabled! Enable it in MT5.")
             bot_logger.info(self.account_info)
             return True
         else:
@@ -45,9 +47,11 @@ class MT5API:
         return mt5.symbol_info_tick(symbol).bid
 
     def klines(self, symbol: str, interval: str, **kwargs): #Klines (also known as candlesticks) represent price movements over a fixed time period
+        
         symbol_rates = mt5.copy_rates_from_pos(
             symbol, getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper()), 0, kwargs["limit"]
         )
+        print(mt5.last_error())
         df = pd.DataFrame(symbol_rates)
         df["time"] += -time.timezone
         df["time"] = pd.to_datetime(df["time"], unit="s")
@@ -76,7 +80,7 @@ class MT5API:
             symbol, getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper()), from_date, limit
         )
         df = pd.DataFrame(symbol_rates)
-        if len(df)==0: return False
+        if len(df)==0: return []
         df["time"] += -time.timezone
         df["time"] = pd.to_datetime(df["time"], unit="s")
         df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]

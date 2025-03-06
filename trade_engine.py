@@ -29,20 +29,20 @@ class TradeEngine:
     def init(self):
         self.mt5_api = ExchangeLoader(self.exc_cfg_file).get_exchange(exchange_name=self.exchange_name)
         if self.mt5_api.initialize() and self.mt5_api.login():
-            bot_logger.info("[+] Init MT5 API success")
+            print("[+] Init MT5 API success")
         else:
-            bot_logger.info("[-] Init MT5 API failed, stop")
+            print("[-] Init MT5 API failed, stop")
             return False
         self.oms = OMSLoader().get_oms(self.exchange_name, self.mt5_api)
         self.init_bot_traders(self.symbols_trading_cfg_file)
         return True
 
     def init_bot_traders(self, symbols_trading_cfg_file):
-        symbols_config = symbols_trading_cfg_file
-        # with open(symbols_trading_cfg_file) as f:
-        #     symbols_config = json.load(f)
+        # symbols_config = symbols_trading_cfg_file
+        with open(symbols_trading_cfg_file) as f:
+            symbols_config = json.load(f)
         for symbol_cfg in symbols_config:
-            bot_logger.info("[+] Create trading bot for symbol: {}".format(symbol_cfg["symbol"]))
+            print("[+] Create trading bot for symbol: {}".format(symbol_cfg["symbol"]))
             bot_trader = Trader(symbol_cfg)
             bot_trader.init_strategies()
             tfs_chart = {}
@@ -51,7 +51,7 @@ class TradeEngine:
                 #print(F"chart_df:\n {chart_df}")
                 chart_df = chart_df[:-1]
                 tfs_chart[tf] = chart_df
-                bot_logger.info(
+                print(
                     "[+] Init bot symbol: {}, tf: {}, from: {} to: {}".format(
                         symbol_cfg["symbol"], tf, chart_df.iloc[0]["Open time"], chart_df.iloc[-1]["Open time"]
                     )
@@ -64,8 +64,8 @@ class TradeEngine:
         self.required_tfs = set(self.required_tfs)
         # Sort timeframes from large to small
         self.required_tfs = [tf for tf in tf_cron.keys() if tf in self.required_tfs]
-        bot_logger.info("[+] Required timeframes: {}".format(self.required_tfs))
-        bot_logger.info("[+] Last updated timeframes: {}".format(self.last_updated_tfs))
+        print("[+] Required timeframes: {}".format(self.required_tfs))
+        print("[+] Last updated timeframes: {}".format(self.last_updated_tfs))
 
     def __update_next_kline__(self):
         curr_time = datetime.now()
@@ -76,7 +76,7 @@ class TradeEngine:
             if ("hour" not in cron_time or hour in cron_time["hour"]) and (
                 "minute" not in cron_time or minute in cron_time["minute"]
             ):
-                bot_logger.info("   [+] Update tf: {}, time: {}".format(tf, curr_time))
+                print("   [+] Update tf: {}, time: {}".format(tf, curr_time))
                 last_updated_tf = self.last_updated_tfs[tf]
                 for bot_trader in self.bot_traders:
                     if tf in bot_trader.get_required_tfs():
@@ -88,10 +88,10 @@ class TradeEngine:
                             time_retry += 0.1
                             time.sleep(0.1)
                             if time_retry > 10:
-                                bot_logger.info("   [+] Update next kline timeout: {}".format(curr_time))
+                                print("   [+] Update next kline timeout: {}".format(curr_time))
                                 break
                         if last_kline.iloc[0]["Open time"] > self.last_updated_tfs[tf]:
-                            bot_logger.info(
+                            print(
                                 "       [+] {}, kline: {}".format(
                                     bot_trader.get_symbol_name(), last_kline.iloc[0]["Open time"]
                                 )
@@ -104,7 +104,7 @@ class TradeEngine:
         self.oms.monitor_trades()
 
     def start(self):
-        bot_logger.info("[*] Start trading bot, time: {}".format(datetime.now()))
+        print("[*] Start trading bot, time: {}".format(datetime.now()))
         self.sched.add_job(
             self.__update_next_kline__,
             "cron",
@@ -118,7 +118,7 @@ class TradeEngine:
         self.sched.start()
 
     def stop(self):
-        bot_logger.info("[*] Stop trading bot, time: {}".format(datetime.now()))
+        print("[*] Stop trading bot, time: {}".format(datetime.now()))
         self.oms.close_all_trade()
         self.sched.shutdown(wait=True)
 
@@ -127,7 +127,7 @@ class TradeEngine:
         for bot_trader in self.bot_traders:
             bot_trader.close_opening_orders()
             backtest_stats = bot_trader.statistic_trade()
-            bot_logger.info(get_pretty_table(backtest_stats, bot_trader.get_symbol_name(), transpose=True, tran_col="NAME"))
+            print(get_pretty_table(backtest_stats, bot_trader.get_symbol_name(), transpose=True, tran_col="NAME"))
             backtest_stats.loc[len(backtest_stats) - 1, "NAME"] = bot_trader.get_symbol_name()
             summary = backtest_stats.loc[len(backtest_stats) - 1 :]
             final_backtest_stats.append(summary)
@@ -139,7 +139,7 @@ class TradeEngine:
         s = table_stats.sum(axis=0)
         table_stats.loc[len(table_stats)] = s
         table_stats.loc[len(table_stats) - 1, "NAME"] = "TOTAL"
-        bot_logger.info(get_pretty_table(table_stats, "SUMMARY", transpose=True, tran_col="NAME"))
+        print(get_pretty_table(table_stats, "SUMMARY", transpose=True, tran_col="NAME"))
         return table_stats
 
     def log_all_trades(self):
@@ -152,7 +152,7 @@ class TradeEngine:
     def log_income_history(self):
         df_ic = self.oms.get_income_history()
         if len(df_ic) > 0:
-            bot_logger.info(get_pretty_table(df_ic, "INCOME SUMMARY"))
+            print(get_pretty_table(df_ic, "INCOME SUMMARY"))
         df_ic.to_csv(os.path.join(os.environ["DEBUG_DIR"], "income_summary.csv"))
         return df_ic
     
@@ -164,7 +164,7 @@ class TradeEngine:
 
     def log_income_history(self, group, from_time, to_time):
         df_ic = self.oms.get_income_history(from_time, to_time, group)
-        if len(df_ic) > 0:
-            bot_logger.info(get_pretty_table(df_ic, "INCOME SUMMARY"))
-            df_ic.to_csv(os.path.join(os.environ["DEBUG_DIR"], "income_summary.csv"))
+        # if len(df_ic) > 0:
+        #     print(get_pretty_table(df_ic, "INCOME SUMMARY"))
+        #     df_ic.to_csv(os.path.join(os.environ["DEBUG_DIR"], "income_summary.csv"))
         return df_ic

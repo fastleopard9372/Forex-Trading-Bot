@@ -4,7 +4,7 @@ import pandas as pd
 from strategy_utils import load_strategy
 from order import Order, OrderSide, OrderStatus, OrderType
 
-bot_logger = logging.getLogger("bot_logger")
+# print = logging.getLogger("print")
 
 
 class Trader:
@@ -57,7 +57,7 @@ class Trader:
         for strategy_def in self.json_cfg["strategies"]:
             strategy = load_strategy(strategy_def)
             if strategy.is_params_valid():
-                bot_logger.info(
+                print(
                     "   [+] Load strategy: {}, params {} success".format(strategy_def["name"], strategy_def["params"])
                 )
                 strategy.set_volume(strategy_def["volume"])
@@ -69,7 +69,7 @@ class Trader:
                     else:
                         self.required_tfs[tf] = [strategy]
             else:
-                bot_logger.error(
+                print.error(
                     "   [-] Load strategy: {}, params {} failed, invalid params".format(
                         strategy_def["name"], strategy_def["params"]
                     )
@@ -80,10 +80,10 @@ class Trader:
 
     def create_trade(self, order: Order, volume):
         if self.oms:
-            bot_logger.info(
+            print(
                 "   [+] Create new order, symbol: {}, strategy: {}".format(self.symbol_name, order["description"])
             )
-            bot_logger.info("    - {}".format(order))
+            print("    - {}".format(order))
             order["symbol"] = self.symbol_name
             order["trade_id"] = self.oms.create_trade(order, volume)
 
@@ -113,7 +113,7 @@ class Trader:
         s["AVG(%)"] = s["TOTAL_PnL(%)"] / s["TOTAL"] if s["TOTAL"] > 0 else 0
         df_stats.loc[len(df_stats)] = s
         df_stats.loc[len(df_stats) - 1, "NAME"] = "TOTAL"
-        # bot_logger.info("\n" + 30 * "-" + " {} ".format(self.symbol_name) + 30 * "-" + "\n" + df_stats.to_string() + "\n" + 70 * "-")
+        # print("\n" + 30 * "-" + " {} ".format(self.symbol_name) + 30 * "-" + "\n" + df_stats.to_string() + "\n" + 70 * "-")
         return df_stats
 
     def close_opening_orders(self):
@@ -140,7 +140,7 @@ class Trader:
                 order.adjust_sl(max_sl)
                 return order
             elif sl_fix_mode == "IGNORE":
-                bot_logger.info("   [-] IGNORE order: {}".format(order))
+                print("   [-] IGNORE order: {}".format(order))
                 return None
             elif sl_fix_mode == "ADJ_ENTRY":
                 adjusted_entry = (

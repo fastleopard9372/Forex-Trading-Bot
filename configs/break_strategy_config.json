@@ -14,16 +14,15 @@
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
-                    "tf": "15m"
+                    "tf": "1m"
                 },
                 "max_sl_pct": 0.75,
                 "volume": 0.01
             }
         ],
         "months": [
-            1,
-            2
+            3
         ],
-        "year": 2024
+        "year": 2025
     }
 ]

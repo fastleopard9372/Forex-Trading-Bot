@@ -5,23 +5,23 @@
             {
                 "name": "break_strategy",
                 "params": {
-                    "min_num_cuml": 20,
-                    "min_zz_pct": 0.2,
-                    "zz_dev": 1.0,
+                    "min_num_cuml": 10,
+                    "min_zz_pct": 0.1,
+                    "zz_dev": 2.0,
                     "ma_vol": 10,
                     "vol_ratio_ma": 1.0,
-                    "kline_body_ratio": 2.0,
+                    "kline_body_ratio": 0.3,
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
-                    "tf": "15m"
+                    "tf": "1m"
                 },
                 "max_sl_pct": 0.75,
                 "volume": 0.01
             }
         ],
         "months": [
-            1,2
+            3
         ],
         "year": 2025
     }
@@ -40,14 +40,14 @@
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
-                    "tf": "15m"
+                    "tf": "1m"
                 },
                 "max_sl_pct": 0.75,
                 "volume": 0.01
             }
         ],
         "months": [
-            1,2
+            3
         ],
         "year": 2025
     }
