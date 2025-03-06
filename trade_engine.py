@@ -38,9 +38,9 @@ class TradeEngine:
         return True
 
     def init_bot_traders(self, symbols_trading_cfg_file):
-        # symbols_config = symbols_trading_cfg_file
-        with open(symbols_trading_cfg_file) as f:
-            symbols_config = json.load(f)
+        symbols_config = symbols_trading_cfg_file
+        # with open(symbols_trading_cfg_file) as f:
+        #     symbols_config = json.load(f)
         for symbol_cfg in symbols_config:
             print("[+] Create trading bot for symbol: {}".format(symbol_cfg["symbol"]))
             bot_trader = Trader(symbol_cfg)
