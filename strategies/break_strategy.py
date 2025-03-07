@@ -8,6 +8,8 @@ from .base_strategy import BaseStrategy
 import indicators as mta
 from order import Order, OrderType, OrderSide, OrderStatus
 from utils import get_line_coffs, find_uptrend_line, find_downtrend_line, get_y_on_line
+from scipy.stats import linregress
+import numpy as np
 
 bot_logger = logging.getLogger("bot_logger")
 
@@ -187,24 +189,48 @@ class BreakStrategy(BaseStrategy):
             return
         self.up_trend_line = find_uptrend_line(n_last_poke_points)
         self.down_trend_line = find_downtrend_line(n_last_peak_points)
-
         self.up_pct = (self.up_trend_line[1][1] - self.up_trend_line[0][1]) / self.up_trend_line[0][1]
         self.down_pct = (self.down_trend_line[1][1] - self.down_trend_line[0][1]) / self.down_trend_line[0][1]
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
+        # 1️⃣ Trend based on Linear Regression Slope
+        # s = 5
+        # l = 80
+        # last_chart = chart['Close'][-l:]
+        # x = np.arange(len(last_chart))
+        # y = last_chart.values
+        # slope, _, _, _, _ = linregress(x, y)
+        
+        # # 2️⃣ Trend based on Percentage Change
+        # last_chart['SM'] = ta.stream.SMA(chart["Close"], s)
+        # last_chart['LM'] = ta.stream.SMA(chart["Close"], l)
+        
+        # first_close = ta.stream.SMA(last_chart[:s], s)
+        # last_close = ta.stream.SMA(last_chart[-s:], s)
+        # percent_change = ((last_close - first_close) / first_close) * 100
+
+        # # 3️⃣ Trend based on Moving Averages
+        # trend_flag = 0
+        # if slope > 0 and percent_change > 0  and last_chart['SM'] > last_chart['LM']:
+        #     trend_flag = 1
+        # elif (slope < 0 and percent_change < 0 and last_chart['SM'] < last_chart['LM']):
+        #     trend_flag = -1
+        # else:
+        #     trend_flag = 0
         if last_kline["Close"] > last_kline["Open"]:
             # green kkline
             if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
                 return
             y_down_pct = get_y_on_line(self.down_trend_line, self.down_trend_line[1][0] + 1)
-            if last_kline["Close"] > y_down_pct and last_kline["Close"] > ta.stream.SMA(chart["Close"], 200):
+            if last_kline["Close"] > y_down_pct and last_kline["Close"] > ta.stream.SMA(chart["Close"], 80):
                 sl = self.up_trend_line[1][1]
+                tp = self.down_trend_line[1][1]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.BUY,
                     last_kline["Close"],
-                    tp=None,
+                    tp=tp,
                     sl=sl,
                     status=OrderStatus.FILLED,
                 )
@@ -224,13 +250,14 @@ class BreakStrategy(BaseStrategy):
             if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
                 return
             y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
-            if last_kline["Close"] < y_up_pct and last_kline["Close"] < ta.stream.SMA(chart["Close"], 200):
+            if last_kline["Close"] < y_up_pct and last_kline["Close"] < ta.stream.SMA(chart["Close"], 40):
                 sl = self.down_trend_line[1][1]
+                tp = self.up_trend_line[1][1]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.SELL,
                     last_kline["Close"],
-                    tp=None,
+                    tp=tp,
                     sl=sl,
                     status=OrderStatus.FILLED,
                 )
