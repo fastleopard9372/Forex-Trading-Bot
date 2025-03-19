@@ -102,11 +102,7 @@ def get_y_on_line(line, xi):
     # line (x0, y0), (xn, yn)
     # x0/xi/xn: datetime
     (x0, y0), (xn, yn) = line
-    # yi = ((xi - x0) / (xn - x0)) * yn + ((xn - xi) / (xn - x0)) * y0
-    if x0 == xn:  # Avoid division by zero
-        return y0
-
-    yi = y0 + ((yn - y0) / (xn - x0)) * (xi - x0)
+    yi = ((xi - x0) / (xn - x0)) * yn + ((xn - xi) / (xn - x0)) * y0
     return yi
 
 

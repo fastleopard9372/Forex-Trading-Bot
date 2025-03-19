@@ -52,7 +52,7 @@
         "year": 2025
     }
 ]
-
+////////////////////////////// last testing //////////////////////////////////////
 
 [
     {
@@ -61,11 +61,11 @@
             {
                 "name": "break_strategy",
                 "params": {
-                    "min_num_cuml": 5,
-                    "min_zz_pct": 0.1,
-                    "zz_dev": 1,
+                    "min_num_cuml": 2,
+                    "min_zz_pct": 0.05,
+                    "zz_dev":2,
                     "ma_vol": 5,
-                    "vol_ratio_ma": 0.1,
+                    "vol_ratio_ma": 0.4,
                     "kline_body_ratio": 0.2,
                     "sl_fix_mode": "ADJ_SL"
                 },
@@ -73,11 +73,11 @@
                     "tf": "1m"
                 },
                 "max_sl_pct": 0.2,
-                "volume": 0.001
+                "volume": 0.01
             }
         ],
         "months": [
-            3
+            10,11,12
         ],
         "year": 2025
     }

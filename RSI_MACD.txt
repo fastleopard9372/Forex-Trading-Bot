@@ -1,0 +1,45 @@
+/*backtest
+start: 2024-01-01 00:00:00
+end: 2024-01-31 23:59:59
+period: 1h
+basePeriod: 15m
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//@version=5
+strategy("MACD and RSI Strategy", shorttitle="MRS long", overlay=true)
+
+// Define input parameters
+fast_length = input.int(5, title="MACD Fast Length")
+slow_length = input.int(35, title="MACD Slow Length")
+signal_smoothing = input.int(5, title="MACD Signal Smoothing")
+rsi_length = input.int(14, title="RSI Length")
+
+// Calculate MACD with custom signal smoothing
+[macdLine, signalLine, _] = ta.macd(close, fast_length, slow_length, signal_smoothing)
+
+// Calculate RSI
+rsi = ta.rsi(close, rsi_length)
+
+// Define buy and close conditions
+buy_condition = ta.crossover(macdLine, signalLine) and rsi < 40
+sell_condition = ta.crossunder(macdLine, signalLine) and rsi > 60
+
+// Define Sell and close conditions
+b_condition = ta.crossunder(macdLine, signalLine) and rsi < 40
+s_condition = ta.crossover(macdLine, signalLine) and rsi > 75
+
+// Plot buy and sell signals on the chart
+plotshape(buy_condition ? 1 : na, style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, title="Buy Signal")
+plotshape(sell_condition ? 1 : na, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, title="Sell Signal")
+
+// Strategy entry and exit conditions
+if (buy_condition)
+    strategy.entry("Buy", strategy.long)
+if (sell_condition)
+    strategy.close("Buy")
+
+// if (s_condition)
+//     strategy.entry("Sell", strategy.short)
+// if (b_condition)
+//     strategy.close("Sell")

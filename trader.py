@@ -134,10 +134,9 @@ class Trader:
             # max_sl_pct was set
             max_sl_pct = max_sl_pct / 100
             max_sl = (1 - max_sl_pct) * order.entry if order.side == OrderSide.BUY else (1 + max_sl_pct) * order.entry
-            max_tp = (1 + 2 * max_sl_pct) * order.entry if order.side == OrderSide.BUY else (1 - 2*max_sl_pct) * order.entry
-            
+            # max_tp = (1 + 2 * max_sl_pct) * order.entry if order.side == OrderSide.BUY else (1 - 2 * max_sl_pct) * order.entry
             if not order.has_sl():
-                order.adjust_tp(max_tp)
+                # order.adjust_tp(max_tp)
                 order.adjust_sl(max_sl)
                 return order
             if (order.side == OrderSide.BUY and order.sl >= max_sl) or (
@@ -145,7 +144,7 @@ class Trader:
             ):
                 return order
             if sl_fix_mode == "ADJ_SL":
-                order.adjust_tp(max_tp)
+                # order.adjust_tp(max_tp)
                 order.adjust_sl(max_sl)
                 return order
             elif sl_fix_mode == "IGNORE":
@@ -179,6 +178,7 @@ class Trader:
 
     def on_kline(self, tf, kline):
         # update strategies
+        # self.tfs_chart[tf] = pd.concat([self.tfs_chart[tf], kline], ignore_index=True)
         self.tfs_chart[tf] = pd.concat([self.tfs_chart[tf], kline], ignore_index=True)
         for strategy in self.required_tfs[tf]:
             strategy.update(tf)

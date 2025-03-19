@@ -38,7 +38,7 @@ class TradeEngine:
         return True
 
     def init_bot_traders(self, symbols_trading_cfg_file):
-        #symbols_config = symbols_trading_cfg_file
+        # symbols_config = symbols_trading_cfg_file
         with open(symbols_trading_cfg_file) as f:
             symbols_config = json.load(f)
         for symbol_cfg in symbols_config:
@@ -81,7 +81,7 @@ class TradeEngine:
                 for bot_trader in self.bot_traders:
                     if tf in bot_trader.get_required_tfs():
                         while True:
-                            chart_df = self.mt5_api.klines(bot_trader.get_symbol_name(), tf, limit=2)
+                            chart_df = self.mt5_api.klines(bot_trader.get_symbol_name(), tf, limit=1)
                             last_kline = chart_df[:1]
                             if last_kline.iloc[0]["Open time"] > self.last_updated_tfs[tf]:
                                 break

@@ -67,7 +67,7 @@ class MT5OMS:
         if order.has_tp():
             order.tp = self.mt5_api.round_price(order["symbol"], order.tp)
         order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
-
+        print(order.entry, order.sl, order.tp)
         trade = Trade(order, volume)
         print("   [*] create trade, trade_id: {}".format(trade.trade_id))
         order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)

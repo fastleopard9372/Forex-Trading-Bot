@@ -13,7 +13,35 @@ import numpy as np
 
 bot_logger = logging.getLogger("bot_logger")
 
-
+# [
+#     {
+#         "symbol": "EURUSD",
+#         "strategies": [
+#             {
+#                 "name": "break_strategy",
+#                 "params": {
+#                     "min_num_cuml": 5,
+#                     "min_zz_pct": 0.15,
+#                     "zz_dev":2,
+#                     "ma_vol": 5,
+#                     "vol_ratio_ma": 0.4,
+#                     "kline_body_ratio": 0.2,
+#                     "sl_fix_mode": "ADJ_SL"
+#                 },
+#                 "tfs": {
+#                     "tf": "1m"
+#                 },
+#                 "max_sl_pct": 0.2,
+#                 "volume": 0.01
+#             }
+#         ],
+#         "months": [
+#             1
+#         ],
+#         "year": 2023
+#     }
+    
+# ]
 class BreakStrategy(BaseStrategy):
     """
     - EMA HeikinAshi strategy
@@ -118,7 +146,7 @@ class BreakStrategy(BaseStrategy):
         if tf != self.tf:
             return
         chart = self.tfs_chart[self.tf]
-        # self.ma_vol.loc[len(self.ma_vol)] = ta.stream.SMA(chart["Volume"], self.params["ma_vol"])
+        self.ma_vol.loc[len(self.ma_vol)] = ta.stream.SMA(chart["Volume"], self.params["ma_vol"])
         last_Zz_pidx = self.zz_points[-1].pidx
         mta.zigzag_stream(chart, self.min_zz_ratio, self.zz_points)
         last_main_idx = self.main_zz_idx[-1]
@@ -126,6 +154,7 @@ class BreakStrategy(BaseStrategy):
         if last_main_idx != self.main_zz_idx[-1]:
             self.temp.append((self.zz_points[self.main_zz_idx[-1]].pidx, len(chart) - 1))
             self.adjust_sl()
+
     def check_required_params(self):
         return all(
             [
@@ -156,8 +185,15 @@ class BreakStrategy(BaseStrategy):
         super().close_opening_orders(self.tfs_chart[self.tf].iloc[-1])
 
     def check_signal(self):
+        
+        self.delta_price_ratio = 0.02
+        self.min_updown_ratio = 1.0
+        self.n_trend_point = 5
+        
         chart = self.tfs_chart[self.tf]
+        # chart = self.tfs_chart[self.tf].iloc[-800:].reset_index(drop=True)
         last_kline = chart.iloc[-1]
+        last_zz_point = self.zz_points[-1]
         #print(f"kline:{last_kline}, vol_ratio:{self.params["vol_ratio_ma"]}, ma_vol:{self.ma_vol.iloc[-1]} ")
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
@@ -169,13 +205,12 @@ class BreakStrategy(BaseStrategy):
                 change = (zz_point_1.pline.high - zz_point_2.pline.low) / zz_point_2.pline.low
             else:
                 change = (zz_point_2.pline.high - zz_point_1.pline.low) / zz_point_2.pline.high
+            # print(f"ch:{change}, limit:{self.params["zz_dev"] * self.min_zz_ratio}")
             if change > self.params["zz_dev"] * self.min_zz_ratio:
                 break
             idx += 1
-        # print("zigzag cnt:", len(self.zz_points))
-        # print("zz_read cnt:", idx)
+
         n_df = chart[self.zz_points[-idx].pidx : -1]
-        # print("last_kline cnt:", len(n_df))
         if len(n_df) < self.params["min_num_cuml"]:
             return
         n_last_poke_points = []
@@ -183,84 +218,100 @@ class BreakStrategy(BaseStrategy):
         for i, kline in n_df.iterrows():
             n_last_poke_points.append((i, kline["Low"]))
             n_last_peak_points.append((i, kline["High"]))
-        # kline_body_pct = n_df[["Open", "Close"]].max(axis=1) - n_df[["Open", "Close"]].min(axis=1)
-        # mean_kline_body = kline_body_pct.mean()
-        # if abs(last_kline["Close"] - last_kline["Open"]) < self.params["kline_body_ratio"] * mean_kline_body:
-        #     return
-        # print(len(n_last_peak_points), len(n_last_poke_points))
+        
         self.up_trend_line = find_uptrend_line(n_last_poke_points)
         self.down_trend_line = find_downtrend_line(n_last_peak_points)
         self.up_pct = (self.up_trend_line[1][1] - self.up_trend_line[0][1]) / self.up_trend_line[0][1]
         self.down_pct = (self.down_trend_line[1][1] - self.down_trend_line[0][1]) / self.down_trend_line[0][1]
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
+        y_up = get_y_on_line(self.up_trend_line, len(chart) - 1)
+        y_down = get_y_on_line(self.down_trend_line, len(chart) - 1)
+        up_close_ratio = abs((last_kline["Close"] - y_up) / (y_down - y_up))
+        down_close_ratio = abs((last_kline["Close"] - y_down) / (y_down - y_up))
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
-        long_sma = ta.stream.SMA(chart["Close"][-200:], 50)
-        short_sma = ta.stream.SMA(chart["Close"][-200:], 50)
 
-        n_df = chart[self.zz_points[-idx].pidx : -1]
-
-        if self.zz_points[-1].ptype == mta.POINT_TYPE.POKE_POINT:
+        macd, macdsignal, macdhist = ta.stream.MACD(
+            chart["Close"][-300:],
+            12,
+            26,
+            9,
+        )
+    
+        if last_zz_point.ptype == mta.POINT_TYPE.POKE_POINT:
             # green kkline
-            if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+            if self.down_pct < 0:
                 return
-            y_down_pct = get_y_on_line(self.down_trend_line, self.down_trend_line[1][0] + 1)
-            # if macd < macdsignal:
-            #     return
-            if y_down_pct < last_kline["Close"] and last_kline["Close"] > short_sma :
-                tp = (last_kline["Close"] - self.up_trend_line[1][1]) * 2 + last_kline["Close"]
-                sl = -(last_kline["Close"] - self.up_trend_line[1][1]) * 1 + last_kline["Close"]
-                order = Order(
-                    OrderType.MARKET,
-                    OrderSide.BUY,
-                    last_kline["Close"],
-                    tp=tp,
-                    sl=sl,
-                    status=OrderStatus.FILLED,
-                )
-                order["FILL_TIME"] = last_kline["Open time"]
-                order["strategy"] = self.name
-                order["description"] = self.description
-                order["desc"] = {
-                    "up_trend_line": self.up_trend_line,
-                    "down_trend_line": self.down_trend_line,
-                }
-                order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
-                if order:
-                    self.trader.create_trade(order, self.volume)
-                    self.orders_opening.append(order)
+            if up_close_ratio > self.min_updown_ratio:
+                return
+            if macd < macdsignal:
+                return
+            sl = min(chart.iloc[last_zz_point.pidx :]["Low"].min(), last_zz_point.pline.low)
+            sl = (1 - self.delta_price_ratio) * sl
+            
+            if (
+                self.down_trend_line[0][1] - self.up_trend_line[0][1]
+                < self.down_trend_line[1][1] - self.up_trend_line[1][1]
+            ):
+                tp = get_y_on_line(self.down_trend_line, len(chart))
+            else:
+                tp = get_y_on_line(self.down_trend_line, len(chart) + 10)
+            order = Order(
+                OrderType.MARKET,
+                OrderSide.BUY,
+                last_kline["Close"],
+                tp=tp,
+                sl=sl,
+                status=OrderStatus.FILLED,
+            )
+            
+            order["FILL_TIME"] = last_kline["Open time"]
+            order["strategy"] = self.name
+            order["description"] = self.description
+            order["desc"] = {
+                "up_trend_line": self.up_trend_line,
+                "down_trend_line": self.down_trend_line,
+            }
+            order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
+            if order:
+                self.trader.create_trade(order, self.volume)
+                self.orders_opening.append(order)
         
-        elif self.zz_points[-1].ptype == mta.POINT_TYPE.PEAK_POINT:
-            # red kkline
-            if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+        if last_zz_point.ptype == mta.POINT_TYPE.PEAK_POINT:
+            if self.up_pct > 0:
                 return
-            # if macd > macdsignal:
-            #     return
-            y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
-            if y_up_pct > last_kline["Close"] and last_kline["Close"] < short_sma:
-                ratio = short_sma/long_sma
-                sl = (self.down_trend_line[1][1] - last_kline["Close"]) * 1 * ratio + last_kline["Close"]
-                tp = -(self.down_trend_line[1][1] - last_kline["Close"]) * 2 * ratio + last_kline["Close"]
-                # print("Sell", long_sma, short_sma)
-                order = Order(
-                    OrderType.MARKET,
-                    OrderSide.SELL,
-                    last_kline["Close"],
-                    tp=tp,
-                    sl=sl,
-                    status=OrderStatus.FILLED,
-                )
-                order["FILL_TIME"] = last_kline["Open time"]
-                order["strategy"] = self.name
-                order["description"] = self.description
-                order["desc"] = {
-                    "up_trend_line": self.up_trend_line,
-                    "down_trend_line": self.down_trend_line,
-                }
-                order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
-                if order:
-                    self.trader.create_trade(order, self.volume)
-                    self.orders_opening.append(order)
+            if down_close_ratio > self.min_updown_ratio:
+                return
+            if macd > macdsignal:
+                return
+            sl = max(chart.iloc[last_zz_point.pidx :]["High"].max(), last_zz_point.pline.high)
+            sl = (1 + self.delta_price_ratio) * sl
+            if (
+                self.down_trend_line[0][1] - self.up_trend_line[0][1]
+                < self.down_trend_line[1][1] - self.up_trend_line[1][1]
+            ):
+                tp = get_y_on_line(self.up_trend_line, len(chart))
+            else:
+                tp = get_y_on_line(self.up_trend_line, len(chart) + 10)
+            order = Order(
+                OrderType.MARKET,
+                OrderSide.SELL,
+                last_kline["Close"],
+                tp=tp,
+                sl=sl,
+                status=OrderStatus.FILLED,
+            )
+            order["FILL_TIME"] = last_kline["Open time"]
+            order["strategy"] = self.name
+            order["description"] = self.description
+            order["desc"] = {
+                "up_trend_line": self.up_trend_line,
+                "down_trend_line": self.down_trend_line,
+            }
+            order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
+            if order:
+                self.trader.create_trade(order, self.volume)
+                self.orders_opening.append(order)
 
     def check_close_signal(self):
         self.check_close_reverse()

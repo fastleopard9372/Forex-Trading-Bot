@@ -74,11 +74,12 @@ class MACross(BaseStrategy):
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
         # print(self.fast_ma)
+        cnt = 100
         if self.state is None:
             if (
                 self.fast_ma.iloc[-1] > self.slow_ma.iloc[-1]
-                and self.slow_ma.iloc[-1] > ta.stream.SMA(chart["Close"], 100)
-                and last_kline["Close"] >= ta.stream.SMA(chart["Close"], 100)
+                and self.slow_ma.iloc[-1] > ta.stream.SMA(chart["Close"], cnt)
+                and last_kline["Close"] >= ta.stream.SMA(chart["Close"], cnt)
                 and last_kline["Close"] > last_kline["Open"]
             ):
                 # new buy order
@@ -95,8 +96,8 @@ class MACross(BaseStrategy):
                     self.state = IN_BUYING
             elif (
                 self.fast_ma.iloc[-1] < self.slow_ma.iloc[-1]
-                and self.slow_ma.iloc[-1] < ta.stream.SMA(chart["Close"], 100)
-                and last_kline["Close"] <= ta.stream.SMA(chart["Close"], 100)
+                and self.slow_ma.iloc[-1] < ta.stream.SMA(chart["Close"], cnt)
+                and last_kline["Close"] <= ta.stream.SMA(chart["Close"], cnt)
                 and last_kline["Close"] < last_kline["Open"]
             ):
                 # new sell order
