@@ -197,7 +197,6 @@ class RSIRegularDivergence(BaseStrategy):
 
     def check_signal(self):
         last_zz_point = self.zz_points[-1]
-        print(last_zz_point.pidx)
         if last_zz_point.pidx in self.checked_pidx:
             return
         

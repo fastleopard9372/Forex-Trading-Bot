@@ -97,6 +97,9 @@ class MT5OMS:
     def get_trade(self, trade_id):
         return self.active_trades.get(trade_id)
 
+    def get_point(self, symbol):
+        return self.mt5_api.get_point(symbol)
+
     def close_trade(self, trade_id):
         print("  [*] close trade: {}".format(trade_id))
         trade = self.get_trade(trade_id)

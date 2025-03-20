@@ -232,7 +232,7 @@ class BreakStrategy(BaseStrategy):
             return
 
         macd, macdsignal, macdhist = ta.stream.MACD(
-            chart["Close"][-300:],
+            chart["Close"],
             12,
             26,
             9,

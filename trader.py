@@ -78,6 +78,10 @@ class Trader:
     def attach_oms(self, oms):
         self.oms = oms
 
+    def get_point(self):
+        if self.oms:
+            return self.oms.get_point(self.symbol_name)
+        return 0.00005
     def create_trade(self, order: Order, volume):
         if self.oms:
             print(

@@ -3,32 +3,51 @@
         "symbol": "EURUSD",
         "strategies": [
             {
-                "name": "rsi_regular_divergence",
+                "name": "break_strategy",
                 "params": {
-                    "rsi_len": 5,
-                    "delta_rsi": 0.2,
-                    "delta_price_pct": 1,
-                    "n_last_point": 5,
-                    "min_rr": 2,
-                    "min_rw_pct": 0.2,
+                    "min_num_cuml": 2,
                     "min_zz_pct": 0.05,
-                    "ob_rsi": 70,
-                    "os_rsi": 30,
-                    "fib_retr_lv": 0.1,
-                    "zz_type": "ZZ_DRC",
-                    "zz_conv_size": 3,
-                    "sl_fix_mode": "ADJ_ENTRY",
-                    "n_trend_point": 20
+                    "zz_dev":2,
+                    "ma_vol": 5,
+                    "vol_ratio_ma": 0.4,
+                    "kline_body_ratio": 0.2,
+                    "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
                     "tf": "1m"
                 },
-                "volume": 0.01,
-                "max_sl_pct": 0.25
+                "max_sl_pct": 0.2,
+                "volume": 0.01
             }
         ],
         "months": [
-            4,5,6
+            10,11,12
+        ],
+        "year": 2023
+    },
+    {
+        "symbol": "EURUSD",
+        "strategies": [
+            {
+                "name": "macd_strategy",
+                "params": {
+                    "min_num_cuml": 2,
+                    "min_zz_pct": 0.05,
+                    "zz_dev":2,
+                    "ma_vol": 5,
+                    "vol_ratio_ma": 0.4,
+                    "kline_body_ratio": 0.2,
+                    "sl_fix_mode": "ADJ_SL"
+                },
+                "tfs": {
+                    "tf": "1m"
+                },
+                "max_sl_pct": 0.2,
+                "volume": 0.01
+            }
+        ],
+        "months": [
+            10,11,12
         ],
         "year": 2023
     }

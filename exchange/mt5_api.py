@@ -40,6 +40,9 @@ class MT5API:
         assets = {}
         return assets
 
+    def get_point(self, symbol):
+        return mt5.symbol_info(symbol).point
+
     def tick_ask_price(self, symbol):
         return mt5.symbol_info_tick(symbol).ask
 

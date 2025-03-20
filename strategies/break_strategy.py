@@ -200,6 +200,7 @@ class BreakStrategy(BaseStrategy):
 
         n_df = chart[self.zz_points[-idx].pidx : -1]
 
+        point = self.trader.get_point() * 15
         if self.zz_points[-1].ptype == mta.POINT_TYPE.POKE_POINT:
             # green kkline
             if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
@@ -208,8 +209,13 @@ class BreakStrategy(BaseStrategy):
             # if macd < macdsignal:
             #     return
             if y_down_pct < last_kline["Close"] and last_kline["Close"] > short_sma :
-                tp = (last_kline["Close"] - self.up_trend_line[1][1]) * 2 + last_kline["Close"]
-                sl = -(last_kline["Close"] - self.up_trend_line[1][1]) * 1 + last_kline["Close"]
+                temp = (last_kline["Close"] - self.up_trend_line[1][1])
+                if point > temp:
+                    tp = point * 2 + last_kline["Close"]
+                    sl = -point * 1 + last_kline["Close"]
+                else:
+                    tp = temp * 2 + last_kline["Close"]
+                    sl= -temp * 1 + last_kline["Close"]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.BUY,
@@ -234,14 +240,15 @@ class BreakStrategy(BaseStrategy):
             # red kkline
             if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
                 return
-            # if macd > macdsignal:
-            #     return
             y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
             if y_up_pct > last_kline["Close"] and last_kline["Close"] < short_sma:
-                ratio = short_sma/long_sma
-                sl = (self.down_trend_line[1][1] - last_kline["Close"]) * 1 * ratio + last_kline["Close"]
-                tp = -(self.down_trend_line[1][1] - last_kline["Close"]) * 2 * ratio + last_kline["Close"]
-                # print("Sell", long_sma, short_sma)
+                temp = (self.down_trend_line[1][1] - last_kline["Close"])
+                if point > temp:
+                    tp = -point * 2 + last_kline["Close"]
+                    sl = point * 1 + last_kline["Close"]
+                else:
+                    tp = -temp * 2 + last_kline["Close"]
+                    sl = temp * 1 + last_kline["Close"]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.SELL,
