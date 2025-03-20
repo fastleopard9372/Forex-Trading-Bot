@@ -29,7 +29,7 @@
         "symbol": "EURUSD",
         "strategies": [
             {
-                "name": "macd_strategy",
+                "name": "rsi_divergence_strategy",
                 "params": {
                     "min_num_cuml": 2,
                     "min_zz_pct": 0.05,

@@ -14,7 +14,7 @@ import numpy as np
 bot_logger = logging.getLogger("bot_logger")
 
 
-class MacdStrategy(BaseStrategy):
+class RSIDevergenceStrategy(BaseStrategy):
 
     def __init__(self, name, params, tfs):
         super().__init__(name, params, tfs)
@@ -182,10 +182,10 @@ class MacdStrategy(BaseStrategy):
         #     13,
         #     5,
         # )
-        rsi = ta.stream.RSI(chart["Close"], 10)
+        rsi = ta.stream.RSI(chart["Close"], 7)
         if(rsi < 30):
             tp = None
-            sl = self.trader.get_point() * 15
+            sl = self.trader.get_point()*2
             if(abs(last_kline["Close"] - self.up_trend_line[1][1]) > sl):
                 sl  = abs(last_kline["Close"] - self.up_trend_line[1][1])
             sl = -sl + last_kline["Close"]
@@ -212,7 +212,7 @@ class MacdStrategy(BaseStrategy):
                 self.trader.create_trade(order, self.volume)
                 self.orders_opening.append(order)
         elif (rsi > 70):
-            sl = self.trader.get_point() * 15
+            sl = self.trader.get_point()*2
             if(abs(last_kline["Close"] - self.down_trend_line[1][1]) > sl):
                 sl  = abs(last_kline["Close"] - self.down_trend_line[1][1])
             tp = None
@@ -247,14 +247,9 @@ class MacdStrategy(BaseStrategy):
         # check close reverse order (buy order has uptrend downward)
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        macd, macdsignal, macdhist = ta.stream.MACD(
-            chart["Close"],
-            6,
-            13,
-            5,
-        )
+       
         rsi = ta.stream.RSI(chart["Close"], 5)
-        if(rsi < 27):
+        if(rsi < 32):
             for i in range(len(self.orders_opening) - 1, -1, -1):
                 order = self.orders_opening[i]
                 if order.side == OrderSide.BUY:
@@ -264,12 +259,13 @@ class MacdStrategy(BaseStrategy):
                 if up_trend_line[0][1] * 1.005 >= up_trend_line[1][1]:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = last_kline["Close"]
+                    order["description"] = self.description
                     order.close(last_kline)
                     self.trader.close_trade(order)
                     if order.is_closed():
                         self.orders_closed.append(order)
                     del self.orders_opening[i]
-        elif( rsi > 73):
+        elif( rsi > 68):
             for i in range(len(self.orders_opening) - 1, -1, -1):
                 order = self.orders_opening[i]
                 if order.side == OrderSide.SELL:
@@ -279,6 +275,7 @@ class MacdStrategy(BaseStrategy):
                 if down_trend_line[0][1] <= down_trend_line[1][1] * 1.005:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = last_kline["Close"]
+                    order["description"] = self.description
                     order.close(last_kline)
                     self.trader.close_trade(order)
                     if order.is_closed():

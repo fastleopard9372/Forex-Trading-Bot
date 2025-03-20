@@ -156,6 +156,7 @@ class BreakStrategy(BaseStrategy):
         super().close_opening_orders(self.tfs_chart[self.tf].iloc[-1])
 
     def check_signal(self):
+        
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
         #print(f"kline:{last_kline}, vol_ratio:{self.params["vol_ratio_ma"]}, ma_vol:{self.ma_vol.iloc[-1]} ")
@@ -195,22 +196,26 @@ class BreakStrategy(BaseStrategy):
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
-        long_sma = ta.stream.SMA(chart["Close"][-200:], 50)
-        short_sma = ta.stream.SMA(chart["Close"][-200:], 50)
-
+        
+        sma = ta.stream.SMA(chart["Close"][-200:], 50)
         n_df = chart[self.zz_points[-idx].pidx : -1]
-
-        point = self.trader.get_point() * 15
+        macd, macdsignal, macdhist = ta.stream.MACD(
+            chart["Close"],
+            12,
+            26,
+            9,
+        )
+        point = self.trader.get_point()
+       
         if self.zz_points[-1].ptype == mta.POINT_TYPE.POKE_POINT:
             # green kkline
             if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
                 return
             y_down_pct = get_y_on_line(self.down_trend_line, self.down_trend_line[1][0] + 1)
-            # if macd < macdsignal:
-            #     return
-            if y_down_pct < last_kline["Close"] and last_kline["Close"] > short_sma :
-                temp = (last_kline["Close"] - self.up_trend_line[1][1])
+            if macd > macdsignal and y_down_pct < last_kline["Close"] and last_kline["Close"] > sma :
+                temp = abs(last_kline["Close"] - self.up_trend_line[1][1])
                 if point > temp:
+                    return
                     tp = point * 2 + last_kline["Close"]
                     sl = -point * 1 + last_kline["Close"]
                 else:
@@ -241,9 +246,10 @@ class BreakStrategy(BaseStrategy):
             if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
                 return
             y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
-            if y_up_pct > last_kline["Close"] and last_kline["Close"] < short_sma:
-                temp = (self.down_trend_line[1][1] - last_kline["Close"])
+            if macd < macdsignal and y_up_pct > last_kline["Close"] and last_kline["Close"] < sma:
+                temp = abs(self.down_trend_line[1][1] - last_kline["Close"])
                 if point > temp:
+                    return
                     tp = -point * 2 + last_kline["Close"]
                     sl = point * 1 + last_kline["Close"]
                 else:
@@ -290,6 +296,7 @@ class BreakStrategy(BaseStrategy):
                 if last_kline["Close"] < y_up:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = y_up
+                    order["description"] = self.description
                     order.close(last_kline)
                     self.trader.close_trade(order)
                     if order.is_closed():
@@ -310,6 +317,7 @@ class BreakStrategy(BaseStrategy):
                 if last_kline["Close"] > y_down:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = y_down
+                    order["description"] = self.description
                     order.close(last_kline)
                     self.trader.close_trade(order)
                     if order.is_closed():
@@ -333,6 +341,7 @@ class BreakStrategy(BaseStrategy):
                     if up_trend_line[0][1] * 1.005 >= up_trend_line[1][1]:
                         order["desc"]["stop_idx"] = len(chart) - 1
                         order["desc"]["y"] = last_kline["Close"]
+                        order["description"] = self.description
                         order.close(last_kline)
                         self.trader.close_trade(order)
                         if order.is_closed():
@@ -349,6 +358,7 @@ class BreakStrategy(BaseStrategy):
                     if down_trend_line[0][1] <= down_trend_line[1][1] * 1.005:
                         order["desc"]["stop_idx"] = len(chart) - 1
                         order["desc"]["y"] = last_kline["Close"]
+                        order["description"] = self.description
                         order.close(last_kline)
                         self.trader.close_trade(order)
                         if order.is_closed():
