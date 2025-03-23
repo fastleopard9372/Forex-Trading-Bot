@@ -118,6 +118,7 @@ class Order:
         self.tp = tp
         self.sl = sl
         self.status = status
+        self.type_item = "ORDER_TIME_GTC"
         self.rr = 0
         self.__attrs__ = {}
         self.calc_stats()
@@ -133,6 +134,7 @@ class Order:
             self.rr = round(self.reward_ratio / self.risk_ratio, 4)
 
     def is_valid(self):
+
         if self.side == OrderSide.BUY:
             if self.has_tp() and self.tp < self.entry:
                 return False

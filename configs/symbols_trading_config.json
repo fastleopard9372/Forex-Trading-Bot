@@ -5,50 +5,50 @@
             {
                 "name": "break_strategy",
                 "params": {
-                    "min_num_cuml": 10,
-                    "min_zz_pct": 0.1,
-                    "zz_dev": 2.0,
-                    "ma_vol": 10,
-                    "vol_ratio_ma": 1.0,
-                    "kline_body_ratio": 0.3,
+                    "min_num_cuml": 2,
+                    "min_zz_pct": 0.05,
+                    "zz_dev":2,
+                    "ma_vol": 5,
+                    "vol_ratio_ma": 0.4,
+                    "kline_body_ratio": 0.2,
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
                     "tf": "1m"
                 },
-                "max_sl_pct": 0.75,
+                "max_sl_pct": 0.2,
                 "volume": 0.01
             }
         ],
         "months": [
-            3
+            10,11,12
         ],
-        "year": 2025
-    }
-    ,{
-        "symbol": "USDJPY",
+        "year": 2023
+    },
+    {
+        "symbol": "EURUSD",
         "strategies": [
             {
-                "name": "break_strategy",
+                "name": "rsi_divergence_strategy",
                 "params": {
-                    "min_num_cuml": 80,
-                    "min_zz_pct": 0.2,
-                    "zz_dev": 3.0,
-                    "ma_vol": 40,
-                    "vol_ratio_ma": 2.0,
-                    "kline_body_ratio": 2,
+                    "min_num_cuml": 2,
+                    "min_zz_pct": 0.05,
+                    "zz_dev":2,
+                    "ma_vol": 5,
+                    "vol_ratio_ma": 0.4,
+                    "kline_body_ratio": 0.2,
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
                     "tf": "1m"
                 },
-                "max_sl_pct": 0.75,
+                "max_sl_pct": 0.2,
                 "volume": 0.01
             }
         ],
         "months": [
-            3
+            10,11,12
         ],
-        "year": 2025
+        "year": 2023
     }
 ]

@@ -1,0 +1,53 @@
+
+
+
+
+
+
+
+
+
+/*backtest
+start: 2024-01-28 00:00:00
+end: 2024-02-04 00:00:00
+period: 1m
+basePeriod: 1m
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//@version=5
+strategy("MA and RSI Crossover Strategy", shorttitle="MA_RSI_Strategy", overlay=true)
+
+// Input parameters
+fastLength = input(10, title="Fast MA Length")
+slowLength = input(50, title="Slow MA Length")
+rsiLength = input(14, title="RSI Length")
+rsiOverbought = input(70, title="RSI Overbought Level")
+rsiOversold = input(50, title="RSI Oversold Level")
+
+// Calculating moving averages
+fastMA = ta.sma(close, fastLength)
+slowMA = ta.sma(close, slowLength)
+
+// Calculating the Relative Strength Index
+rsiValue = ta.rsi(close, rsiLength)
+
+// Defining buy and sell signals
+buySignal = ta.crossover(fastMA, slowMA) and rsiValue < rsiOversold
+sellSignal = ta.crossunder(fastMA, slowMA) and rsiValue > rsiOverbought
+
+// Strategy logic
+strategy.entry("Buy", strategy.long, when=buySignal)
+strategy.close("Buy", when=sellSignal)
+
+// Plotting moving average
+plot(fastMA, color=color.green, title="Fast MA")
+plot(slowMA, color=color.red, title="Slow MA")
+
+// Plotting the RSI
+hline(rsiOverbought, "RSI Overbought", color=color.red)
+hline(rsiOversold, "RSI Oversold", color=color.green)
+plot(rsiValue, color=color.blue, title="RSI")
+
+// Mark the buy point at the buy signal
+plotshape(series=buySignal, title="Buy Signal", color=color.green, style=shape.triangleup, location=location.belowbar, size=size.huge)

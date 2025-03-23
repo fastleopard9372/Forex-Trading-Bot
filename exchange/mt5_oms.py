@@ -67,7 +67,7 @@ class MT5OMS:
         if order.has_tp():
             order.tp = self.mt5_api.round_price(order["symbol"], order.tp)
         order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
-
+        print(order.entry, order.sl, order.tp)
         trade = Trade(order, volume)
         print("   [*] create trade, trade_id: {}".format(trade.trade_id))
         order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)
@@ -96,6 +96,9 @@ class MT5OMS:
 
     def get_trade(self, trade_id):
         return self.active_trades.get(trade_id)
+
+    def get_point(self, symbol):
+        return self.mt5_api.get_point(symbol)
 
     def close_trade(self, trade_id):
         print("  [*] close trade: {}".format(trade_id))
@@ -207,7 +210,19 @@ class MT5OMS:
             df=pd.DataFrame(list(result),columns=result[0]._asdict().keys())
             df["time"] += -time.timezone
             df['time'] = pd.to_datetime(df['time'], unit='s')
-            df = df[['symbol', 'type', 'price', 'volume', 'profit','time','time_msc']]
+        return df
+    
+    def get_income_orders_history(self, from_time,to_time, group="*"):
+        from_time = from_time + timedelta(seconds=-time.timezone)
+        to_time = to_time + timedelta(seconds=-time.timezone)
+        result = self.mt5_api.history_orders_get(from_time, to_time, group=group)
+        df=[]
+        if result:
+            df=pd.DataFrame(list(result),columns=result[0]._asdict().keys())
+            df["time_setup"] += -time.timezone
+            df['time_setup'] = pd.to_datetime(df['time_setup'], unit='s')
+            df["time_done"] += -time.timezone
+            df['time_done'] = pd.to_datetime(df['time_setup'], unit='s')
         return df
     
     def klinesDate(self, symbol: str, interval:str, from_date: datetime, to_date: datetime): 

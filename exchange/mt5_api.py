@@ -22,14 +22,14 @@ class MT5API:
         # connect to the trade account specifying a server
         authorized = mt5.login(self.config["account"], server=self.config["server"])
         if authorized:
-            bot_logger.info("[+] Login success, account info: ")
+            print("[+] Login success, account info: ")
             self.account_info = mt5.account_info()._asdict()
             if not mt5.account_info().trade_allowed:
                 print("AutoTrading is disabled! Enable it in MT5.")
-            bot_logger.info(self.account_info)
+            print(self.account_info)
             return True
         else:
-            bot_logger.info("[-] Login failed, check account infor")
+            print("[-] Login failed, check account infor")
             return False
 
     def round_price(self, symbol, price):
@@ -39,6 +39,9 @@ class MT5API:
     def get_assets_balance(self, assets=["USD"]):
         assets = {}
         return assets
+
+    def get_point(self, symbol):
+        return mt5.symbol_info(symbol).point
 
     def tick_ask_price(self, symbol):
         return mt5.symbol_info_tick(symbol).ask
@@ -51,7 +54,7 @@ class MT5API:
         symbol_rates = mt5.copy_rates_from_pos(
             symbol, getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper()), 0, kwargs["limit"]
         )
-        print(mt5.last_error())
+        # print(mt5.last_error())
         df = pd.DataFrame(symbol_rates)
         df["time"] += -time.timezone
         df["time"] = pd.to_datetime(df["time"], unit="s")
@@ -95,3 +98,12 @@ class MT5API:
     
     def history_deals_get(self, from_time, to_time, group="*"):
         return mt5.history_deals_get(from_time, to_time, group = group)
+
+    def history_orders_get(self, from_time, to_time, group="*"):
+        return mt5.history_orders_get(from_time, to_time, group = group)
+
+    # def positions_get(self, symbol=None):
+    #     if symbol:
+    #         return mt5.positions_get(symbol=symbol)
+    #     else:
+    #         return mt5.positions_get()

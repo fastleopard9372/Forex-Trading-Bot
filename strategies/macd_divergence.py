@@ -226,7 +226,7 @@ class MACDDivergence(BaseStrategy):
                 max_high_idx = get_next_zz_point(zz_point)
                 low_1_idx = self.macd_type.iloc[zz_point.pidx : max_high_idx].idxmin()
                 low_2_idx = self.macd_type.iloc[self.zz_points[-2].pidx : len(chart)].idxmin()
-                #print("POKE::: low_1: {}, low_2: {}, macd: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.delta_macd))
+                # print("POKE::: low_1: {}, low_2: {}, cont: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.macd_type.iloc[low_1_idx] < self.macd_type.iloc[low_2_idx]))
                 if self.macd_type.iloc[low_1_idx] > self.macd_type.iloc[low_2_idx] + self.delta_macd:
                     if self.macd_type.iloc[low_1_idx] * self.macd_type.iloc[low_2_idx] < 0:
                         continue
@@ -315,7 +315,7 @@ class MACDDivergence(BaseStrategy):
                 min_low_idx = get_next_zz_point(zz_point)
                 low_1_idx = self.macd_type.iloc[zz_point.pidx : min_low_idx].idxmax()
                 low_2_idx = self.macd_type.iloc[self.zz_points[-2].pidx : len(chart)].idxmax()
-                #print("PEAK::: low_1: {}, low_2: {}, macd: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.delta_macd))
+                # print("PEAK::: low_1: {}, low_2: {}, cont: {}".format(self.macd_type.iloc[low_1_idx],self.macd_type.iloc[low_2_idx],self.macd_type.iloc[low_1_idx] < self.macd_type.iloc[low_2_idx]))
                 
                 if self.macd_type.iloc[low_1_idx] < self.macd_type.iloc[low_2_idx] - self.delta_macd:
                     if self.macd_type.iloc[low_1_idx] * self.macd_type.iloc[low_2_idx] < 0:

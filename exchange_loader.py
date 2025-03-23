@@ -9,9 +9,9 @@ class ExchangeLoader:
     }
 
     def __init__(self, exc_cfg_file):
-        self.exchange_configs = exc_cfg_file
-        # with open(exc_cfg_file) as f:
-        #     self.exchange_configs = json.load(f)
+        # self.exchange_configs = exc_cfg_file
+        with open(exc_cfg_file) as f:
+            self.exchange_configs = json.load(f)
 
     def get_exchange(self, exchange_name):
         if exchange_name not in ExchangeLoader.__exchanges__:

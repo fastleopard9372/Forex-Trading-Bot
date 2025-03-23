@@ -5,9 +5,9 @@
             {
                 "name": "ma_cross",
                 "params": {
-                    "fast_ma": 10,
-                    "slow_ma": 20,
-                    "type": "SMA",
+                    "fast_ma": 100,
+                    "slow_ma": 200,
+                    "type": "EMA",
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {

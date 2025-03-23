@@ -103,7 +103,7 @@ class BackTest:
             bot_trader = self.backtest_bot_trader(symbol_cfg)
             self.bot_traders.append(bot_trader)
             c += 1
-            if c >= 1:
+            if c >= 2:
                 break
         bot_logger.info("[*] Backtesting finished")
 

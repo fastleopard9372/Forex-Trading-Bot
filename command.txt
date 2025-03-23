@@ -6,3 +6,4 @@ py main.py --mode live --exch mt5 --exch_cfg_file configs/exchange_config.json -
 
 py tuning.py --sym_cfg_file tuning_configs/break_strategy_tuning_config.json --data_dir d:/MT5_Data
 
+//py.exe -3.13 -m pip install ta_lib-0.6.3-cp313-cp313-win_amd64.whl

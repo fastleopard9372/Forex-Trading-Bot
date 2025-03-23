@@ -199,6 +199,7 @@ class RSIRegularDivergence(BaseStrategy):
         last_zz_point = self.zz_points[-1]
         if last_zz_point.pidx in self.checked_pidx:
             return
+        
         self.checked_pidx.append(last_zz_point.pidx)
         self.find_divergenced_seg()
         if len(self.divergenced_segs) == 0:
@@ -220,13 +221,14 @@ class RSIRegularDivergence(BaseStrategy):
             return
         max_high = max([zp[1] for zp in n_last_peak_points])
         min_low = min([zp[1] for zp in n_last_poke_points])
+        
         if last_zz_point.ptype == mta.POINT_TYPE.PEAK_POINT and last_diverg_seg[0].ptype == mta.POINT_TYPE.PEAK_POINT:
             if last_zz_point.pline.high > self.zz_points[-3].pline.high:
                 return
             # price higher highs, indicator lower highs.
             sl = last_zz_point.pline.high
             entry = last_kline["Close"]
-            tp = max_high - self.params["fib_retr_lv"] * (max_high - min_low)
+            tp = last_kline["Close"]
             order = Order(
                 OrderType.MARKET,
                 OrderSide.SELL,

@@ -5,20 +5,20 @@
             {
                 "name": "rsi_regular_divergence",
                 "params": {
-                    "rsi_len": 14,
-                    "delta_rsi": 2,
+                    "rsi_len": 7,
+                    "delta_rsi": 0.2,
                     "delta_price_pct": 0.1,
                     "n_last_point": 5,
                     "min_rr": 2,
                     "min_rw_pct": 0.75,
-                    "min_zz_pct": 0.5,
+                    "min_zz_pct": 0.1,
                     "ob_rsi": 70,
-                    "os_rsi": 25,
+                    "os_rsi": 30,
                     "fib_retr_lv": 1,
                     "zz_type": "ZZ_DRC",
                     "zz_conv_size": 3,
                     "sl_fix_mode": "ADJ_ENTRY",
-                    "n_trend_point": 40
+                    "n_trend_point": 10
                 },
                 "tfs": {
                     "tf": "15m"
@@ -28,9 +28,8 @@
             }
         ],
         "months": [
-            1,
-            2
+            4,5,6
         ],
-        "year": 2024
+        "year": 2023
     }
 ]

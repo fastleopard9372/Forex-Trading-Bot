@@ -5,6 +5,7 @@ strategies = {
     "ma_heikin_ashi": "MAHeikinAshi",
     "rsi_hidden_divergence": "RSIDivergence",
     "macd_divergence": "MACDDivergence",
+    "rsi_divergence_strategy": "RSIDevergenceStrategy",
     "rsi_regular_divergence": "RSIRegularDivergence",
     "break_strategy": "BreakStrategy",
     "price_action": "PriceAction",

@@ -38,9 +38,9 @@ class TradeEngine:
         return True
 
     def init_bot_traders(self, symbols_trading_cfg_file):
-        symbols_config = symbols_trading_cfg_file
-        # with open(symbols_trading_cfg_file) as f:
-        #     symbols_config = json.load(f)
+        # symbols_config = symbols_trading_cfg_file
+        with open(symbols_trading_cfg_file) as f:
+            symbols_config = json.load(f)
         for symbol_cfg in symbols_config:
             print("[+] Create trading bot for symbol: {}".format(symbol_cfg["symbol"]))
             bot_trader = Trader(symbol_cfg)
@@ -81,7 +81,7 @@ class TradeEngine:
                 for bot_trader in self.bot_traders:
                     if tf in bot_trader.get_required_tfs():
                         while True:
-                            chart_df = self.mt5_api.klines(bot_trader.get_symbol_name(), tf, limit=2)
+                            chart_df = self.mt5_api.klines(bot_trader.get_symbol_name(), tf, limit=1)
                             last_kline = chart_df[:1]
                             if last_kline.iloc[0]["Open time"] > self.last_updated_tfs[tf]:
                                 break
@@ -167,4 +167,7 @@ class TradeEngine:
         # if len(df_ic) > 0:
         #     print(get_pretty_table(df_ic, "INCOME SUMMARY"))
         #     df_ic.to_csv(os.path.join(os.environ["DEBUG_DIR"], "income_summary.csv"))
+        return df_ic
+    def log_income_orders_history(self, group, from_time, to_time):
+        df_ic = self.oms.get_income_orders_history(from_time, to_time, group)
         return df_ic
