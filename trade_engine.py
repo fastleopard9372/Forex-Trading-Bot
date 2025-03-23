@@ -168,3 +168,6 @@ class TradeEngine:
         #     print(get_pretty_table(df_ic, "INCOME SUMMARY"))
         #     df_ic.to_csv(os.path.join(os.environ["DEBUG_DIR"], "income_summary.csv"))
         return df_ic
+    def log_income_orders_history(self, group, from_time, to_time):
+        df_ic = self.oms.get_income_orders_history(from_time, to_time, group)
+        return df_ic

@@ -98,3 +98,12 @@ class MT5API:
     
     def history_deals_get(self, from_time, to_time, group="*"):
         return mt5.history_deals_get(from_time, to_time, group = group)
+
+    def history_orders_get(self, from_time, to_time, group="*"):
+        return mt5.history_orders_get(from_time, to_time, group = group)
+
+    # def positions_get(self, symbol=None):
+    #     if symbol:
+    #         return mt5.positions_get(symbol=symbol)
+    #     else:
+    #         return mt5.positions_get()

@@ -158,7 +158,6 @@ def register():
 
     return jsonify({"message": "User  registered successfully!"}), 201
 
-
 @app.route('/signin', methods=['POST'])
 def signin():
     data = request.get_json()
@@ -244,7 +243,7 @@ def get_mt5_data():
     count = 75
     
     from_date = datetime.now() - timedelta(minutes=get_count(tf, count))
-    history = trade_engine.log_income_history("EURUSD", datetime(2022,1,1), to_date)
+    history = trade_engine.get_income_orders_history("EURUSD", datetime(2022,1,1), to_date)
     
     # total_profit = total_history["profit"].sum()
     # today = (datetime.now()+timedelta(seconds=-time.timezone)).date()

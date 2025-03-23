@@ -1,31 +1,57 @@
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO, emit
-from datetime import datetime
 import os
 import time
-from datetime import datetime
 import argparse
 import logging
 import logging.config
 from trade_engine import TradeEngine
 from backtest import BackTest
+from datetime import datetime, timedelta, timezone
 from utils import datetime_to_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dmf;aowur2304u234;l23=-412;'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Sample data for trading history and profit/loss
-trading_history = [
-    {"id": 1, "symbol": "AAPL", "action": "buy", "quantity": 10, "price": 150},
-    {"id": 2, "symbol": "GOOGL", "action": "sell", "quantity": 5, "price": 2800}
-]
+def config_logging(exchange):
+    if not os.path.isdir(os.path.join(os.environ["LOG_DIR"], exchange)):
+        os.makedirs(os.path.join(os.environ["LOG_DIR"], exchange), exist_ok=True)
+    curr_time = datetime.now()
+    logging.config.fileConfig(
+        "logging_config.ini",
+        defaults={"logfilename": "logs/{}/bot_{}.log".format(exchange, datetime_to_filename(curr_time))},
+    )
+    logging.getLogger().setLevel(logging.WARNING)
 
-profit_loss = {
-    "total_profit": 500,
-    "total_loss": 200
-}
-# Function to create a candlestick from starttime to endtime
+parser = None
+args = None
+trade_engine = None
+trade_init_flag = False
+trade_start_flag = False
+
+def set_config(args):
+    global trade_engine
+    os.environ["DEBUG_DIR"] = "debug"
+    os.environ["LOG_DIR"] = "logs"
+    config_logging(args.exch)
+    if not os.path.isdir(os.environ["DEBUG_DIR"]):
+        os.mkdir(os.environ["DEBUG_DIR"])
+
+def get_count(tf, limit):
+    tf[-1:] + tf[:-1]
+    tm = len(tf[:-1])
+    count = limit
+    if tf[-1:].upper()== "H":
+        count = count * 60
+    elif tf[-1:].upper()== "D":
+        count = count * 60* 24
+    elif tf[-1:].upper()== "W":
+        count = count * 60* 24 * 7
+    count = count * tm
+    return count
+
+
 @app.route('/api/candlestick', methods=['POST'])
 def get_candlestick():
     data = request.json
@@ -47,6 +73,7 @@ def get_candlestick():
         return jsonify({"error": "No trades in the specified time range"}), 404
 
     return jsonify(candlestick)
+
 def create_candlestick(starttime, endtime, trades):
     filtered_trades = [trade for trade in trades if starttime <= trade['timestamp'] <= endtime]
     if not filtered_trades:
@@ -68,31 +95,141 @@ def create_candlestick(starttime, endtime, trades):
         "volume": volume
     }
 
-# Example usage
-@app.route('/api/trading-history', methods=['GET'])
-def get_trading_history():
-    return jsonify(trading_history)
-
-@app.route('/api/profit-loss', methods=['GET'])
-def get_profit_loss():
-    return jsonify(profit_loss)
-
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
     emit('message', {'data': 'Connected to server'})
 
+@socketio.on('start_trade')
+def handle_start_trade():
+    global trade_start_flag
+    if trade_init_flag:
+        trade_start_flag = True
+        trade_engine.start()
+        emit('trade_status', {'status': 'Trading engine started'})
+    else:
+        trade_start_flag = False
+        emit('trade_status', {'error': 'Failed to initialize trading engine'})
+@socketio.on('stop_trade')
+def handle_stop_trade():
+    global trade_start_flag
+    if trade_start_flag:
+        trade_engine.stop()
+        trade_start_flag = False
+        emit('trade_status', {'status': 'Trading engine stopped'})
+    else:
+        emit('trade_status', {'error': 'Trading engine is not running'})
+
 @socketio.on('get_trading_history')
-def handle_get_trading_history():
-    emit('trading_history', trading_history)
+def handle_get_trading_history(data):
+    # to_date = datetime(data.get('to_date'))+timedelta(seconds=-time.timezone).date()
+    # from_date = datetime(data.get('from_date'))+timedelta(seconds=-time.timezone).date()
+    from_date = data.get('from_date')
+    from_date = datetime.strptime(from_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    from_date = from_date.replace(tzinfo=timezone.utc)
+    to_date = data.get('to_date')
+    to_date = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    to_date = to_date.replace(tzinfo=timezone.utc)
+    symbol = data.get('symbol', "EURUSD")
+    history = trade_engine.log_income_history(symbol, from_date, to_date)
+    
+    if len(history) > 0:
+        history_data = history.to_json(orient="records")
+    else:
+        history_data = []
+    emit('trading_history', history_data)
 
 @socketio.on('get_profit_loss')
-def handle_get_profit_loss():
-    emit('profit_loss', profit_loss)
+def handle_get_profit_loss(data):
+    
+    symbol = data.get('symbol', "EURUSD")
+    now = datetime.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    week_start = today_start - timedelta(days=today_start.weekday())
+    month_start = today_start.replace(day=1)
+    hour_ago = now - timedelta(hours=1)
+    # Initialize counters for yesterday, week, two hours ago, and month
+    counters = {
+        "today": {"long_trades": 0, "short_trades": 0, "profit": 0, "loss": 0},
+        "yesterday": {"long_trades": 0, "short_trades": 0, "profit": 0, "loss": 0},
+        "week": {"long_trades": 0, "short_trades": 0, "profit": 0, "loss": 0},
+        "hour_ago": {"long_trades": 0, "short_trades": 0, "profit": 0, "loss": 0},
+        "month": {"long_trades": 0, "short_trades": 0, "profit": 0, "loss": 0},
+    }
+
+    # Fetch trading history for different time ranges
+    history_yesterday = trade_engine.log_income_history(symbol, yesterday_start, today_start)
+    history_week = trade_engine.log_income_history(symbol, week_start, now)
+    history_hour = trade_engine.log_income_history(symbol, hour_ago, now)
+    history_month = trade_engine.log_income_history(symbol, month_start, now)
+
+    # Helper function to calculate counters
+    def calculate_counters(history, time_key):
+        if len(history) > 0:
+            counters[time_key]["long_trades"] = len(history.loc[history['type'] == 0])
+            counters[time_key]["short_trades"] = len(history.loc[history['type'] == 1])
+            counters[time_key]["profit"] = history.loc[history['profit'] > 0, 'profit'].sum()
+            counters[time_key]["loss"] = history.loc[history['profit'] < 0, 'profit'].sum()
+
+    # Calculate counters for each time range
+    calculate_counters(history_yesterday, "yesterday")
+    calculate_counters(history_yesterday, "today")
+    calculate_counters(history_week, "week")
+    calculate_counters(history_hour, "hour_ago")
+    calculate_counters(history_month, "month")
+
+    # Calculate percentages
+    for time_key in counters:
+        total_trades = counters[time_key]["long_trades"] + counters[time_key]["short_trades"]
+        counters[time_key]["profit_percent"] = (
+            (counters[time_key]["profit"] / (counters[time_key]["profit"] + abs(counters[time_key]["loss"]))) * 100
+            if counters[time_key]["profit"] + abs(counters[time_key]["loss"]) > 0
+            else 0
+        )
+        counters[time_key]["total_trades"] = total_trades
+        counters[time_key]["loss_percent"] = 100 - counters[time_key]["profit_percent"]
+        if(counters[time_key]["profit"] == 0 and abs(counters[time_key]["loss"]) == 0):
+            counters[time_key]["loss_percent"] = 0
+    emit('profit_loss_counters', counters)
+
+@socketio.on('get_kline')
+def handle_get_kline(data):
+    symbol = data.get('symbol','EURUSD')
+    interval = data.get('interval', '1M')
+    length = data.get('length',0)
+    from_date = data.get('from_date')
+    from_date = datetime.strptime(from_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    from_date = from_date.replace(tzinfo=timezone.utc)
+    to_date = data.get('to_date')
+    to_date = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    to_date = to_date.replace(tzinfo=timezone.utc)
+    
+    if length == 0:
+        kline = trade_engine.klinesDate(symbol, interval, from_date, to_date)
+    else:
+        from_date = to_date - timedelta(minutes=get_count(interval, length))
+        kline = trade_engine.klinesCount(symbol, interval, from_date, length)
+    
+    if len(kline) > 0:
+        kline_json = kline.to_json(orient="records")
+    else:
+        kline_json = []
+    emit('kline_data', kline_json)
 
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Socket server for trading engine")
+    parser.add_argument("--mode", type=str, default="live", help="Mode of operation (live/backtest)")
+    parser.add_argument("--exch", type=str, default="mt5", help="Exchange name")
+    parser.add_argument("--exch_cfg_file", type=str, default="configs/exchange_config.json", help="Exchange config file")
+    parser.add_argument("--sym_cfg_file", type=str, default="configs/symbols_trading_config.json", help="Symbols trading config file")
+    parser.add_argument("--data_dir", type=str, default="D:\\MT5_Data", help="Data directory")
+    args = parser.parse_args()
+    set_config(args)
+    trade_engine = TradeEngine(args.exch, args.exch_cfg_file, args.sym_cfg_file)
+    trade_init_flag = trade_engine.init()
     socketio.run(app, host='0.0.0.0', port=5000)
