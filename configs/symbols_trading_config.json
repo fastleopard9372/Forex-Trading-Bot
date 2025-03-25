@@ -5,6 +5,16 @@
             {
                 "name": "break_strategy",
                 "params": {
+                    "macd_inputs": {
+                        "fast_len": 12,
+                        "signal": 9,
+                        "slow_len": 26
+                    },
+                    "rsi_inputs":{
+                        "rsi_len": 5,
+                        "ob_rsi":70,
+                        "os_rsi":30
+                    },
                     "min_num_cuml": 2,
                     "min_zz_pct": 0.05,
                     "zz_dev":2,
@@ -31,11 +41,14 @@
             {
                 "name": "rsi_divergence_strategy",
                 "params": {
-                    "min_num_cuml": 2,
+                    "min_num_cuml": 5,
                     "min_zz_pct": 0.05,
                     "zz_dev":2,
                     "ma_vol": 5,
                     "vol_ratio_ma": 0.4,
+                    "rsi_len": 5,
+                    "ob_rsi":70,
+                    "os_rsi":30,
                     "kline_body_ratio": 0.2,
                     "sl_fix_mode": "ADJ_SL"
                 },

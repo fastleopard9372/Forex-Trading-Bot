@@ -81,6 +81,7 @@ class Trader:
     def get_point(self):
         n = 3
         if self.oms:
+            if(self.oms.get_point(self.symbol_name) < 0.00015): return 0.00015*n
             return self.oms.get_point(self.symbol_name) * n
         return 0.00015*n
     def create_trade(self, order: Order, volume):

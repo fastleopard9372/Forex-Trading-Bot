@@ -14,7 +14,7 @@ import numpy as np
 bot_logger = logging.getLogger("bot_logger")
 
 
-class RSIDevergenceStrategy(BaseStrategy):
+class RsiMacd(BaseStrategy):
 
     def __init__(self, name, params, tfs):
         super().__init__(name, params, tfs)
@@ -23,10 +23,10 @@ class RSIDevergenceStrategy(BaseStrategy):
         self.trend = None
         self.min_zz_ratio = 0.01 * self.params["min_zz_pct"]
         self.temp = []
-        self.rsi_out_cnt = 0
-        self.rsi_len = self.params["rsi_len"]
-        self.ob_rsi = self.params["ob_rsi"]
-        self.os_rsi = self.params["os_rsi"]
+        self.rsi_len = self.params["rsi_inputs"]["rsi_len"]
+        self.ob_rsi = self.params["rsi_inputs"]["ob_rsi"]
+        self.os_rsi = self.params["rsi_inputs"]["os_rsi"]
+        self.rsi = 50
 
     def attach(self, tfs_chart):
         self.tfs_chart = tfs_chart
@@ -36,9 +36,16 @@ class RSIDevergenceStrategy(BaseStrategy):
         # calculate HA candelstick
         chart = self.tfs_chart[self.tf]
         self.ma_vol = ta.SMA(chart["Volume"], self.params["ma_vol"])
-        self.rsi = ta.RSI(chart["Close"], self.rsi_len)
         self.zz_points = mta.zigzag(chart, self.min_zz_ratio)
         self.init_main_zigzag()
+
+        self.macd, self.macdsignal, self.macdhist = ta.MACD(
+            chart["Close"],
+            self.params["macd_inputs"]["fast_len"],
+            self.params["macd_inputs"]["slow_len"],
+            self.params["macd_inputs"]["signal"],
+        )
+        self.rsi = ta.RSI(chart["Close"], self.rsi_len)
         self.start_trading_time = chart.iloc[-1]["Open time"]
 
     def init_main_zigzag(self):
@@ -121,9 +128,20 @@ class RSIDevergenceStrategy(BaseStrategy):
             return
         chart = self.tfs_chart[self.tf]
         self.ma_vol.loc[len(self.ma_vol)] = ta.stream.SMA(chart["Volume"], self.params["ma_vol"])
-        self.rsi[len(self.rsi)] = ta.stream.RSI(chart["Close"], self.rsi_len)
         last_Zz_pidx = self.zz_points[-1].pidx
         mta.zigzag_stream(chart, self.min_zz_ratio, self.zz_points)
+        macd, macdsignal, macdhist = ta.stream.MACD(
+            chart["Close"],
+            self.params["macd_inputs"]["fast_len"],
+            self.params["macd_inputs"]["slow_len"],
+            self.params["macd_inputs"]["signal"],
+        )
+        self.macd.loc[len(self.macd)] = macd
+        self.macdsignal.loc[len(self.macdsignal)] = macdsignal
+        self.macdhist.loc[len(self.macdhist)] = macdhist
+
+        self.rsi.loc[len(self.rsi)] = ta.stream.RSI(chart["Close"], self.rsi_len)
+
         last_main_idx = self.main_zz_idx[-1]
         self.update_main_zigzag()
         if last_main_idx != self.main_zz_idx[-1]:
@@ -138,6 +156,8 @@ class RSIDevergenceStrategy(BaseStrategy):
                     "vol_ratio_ma",
                     "kline_body_ratio",
                     "sl_fix_mode",
+                    "macd_inputs",
+                    "rsi_inputs"
                 ]
             ]
         )
@@ -157,25 +177,33 @@ class RSIDevergenceStrategy(BaseStrategy):
 
     def close_opening_orders(self):
         super().close_opening_orders(self.tfs_chart[self.tf].iloc[-1])
-        
+
     def check_signal(self):
+        print("Rsi Macd")
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        print(last_kline["Volume"] , self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1])
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         idx = 1
         while idx < len(self.zz_points):
-            df_len = len(chart[self.zz_points[-idx].pidx : -1])
-            if(df_len > self.params["min_num_cuml"]): break
+            zz_point_1 = self.zz_points[-idx]
+            zz_point_2 = self.zz_points[-idx - 1]
+            if zz_point_2.ptype == mta.POINT_TYPE.POKE_POINT:
+                change = (zz_point_1.pline.high - zz_point_2.pline.low) / zz_point_2.pline.low
+            else:
+                change = (zz_point_2.pline.high - zz_point_1.pline.low) / zz_point_2.pline.high
+            if change > self.params["zz_dev"] * self.min_zz_ratio:
+                break
             idx += 1
+        n_df = chart[self.zz_points[-idx].pidx : -1]
+        if len(n_df) < self.params["min_num_cuml"]:
+            return
         n_last_poke_points = []
         n_last_peak_points = []
-        print(idx, len(chart[self.zz_points[-idx].pidx : -1]))
-        if(len(chart[self.zz_points[-idx].pidx : -1]) < 2): return
-        for i, kline in chart[self.zz_points[-idx].pidx : -1].iterrows():
+        for i, kline in n_df.iterrows():
             n_last_poke_points.append((i, kline["Low"]))
             n_last_peak_points.append((i, kline["High"]))
+
         self.up_trend_line = find_uptrend_line(n_last_poke_points)
         self.down_trend_line = find_downtrend_line(n_last_peak_points)
         self.up_pct = (self.up_trend_line[1][1] - self.up_trend_line[0][1]) / self.up_trend_line[0][1]
@@ -183,26 +211,32 @@ class RSIDevergenceStrategy(BaseStrategy):
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
-        # macd, macdsignal, macdhist = ta.stream.MACD(
-        #     chart["Close"],
-        #     6,
-        #     13,
-        #     5,
-        # )
-        rsi = ta.stream.SMA(self.rsi, 2)
-        amount = self.trader.get_point() * 4
-        print("point:", amount)
-        if(amount < 0.0002 * last_kline["Close"]): amount = 0.0002 * last_kline["Close"]
-        if(amount > 0.001 * last_kline["Close"]): amount = 0.001 * last_kline["Close"]
+        
+        trading_flag = 0
 
-        if(rsi <= self.os_rsi):
-            if(abs(last_kline["Close"] - self.up_trend_line[1][1]) > amount):
-                amount  = abs(last_kline["Close"] - self.up_trend_line[1][1])
-            tp = 4 * amount + last_kline["Close"]
-            sl = -2 * amount + last_kline["Close"]
-            # print("BUY", "sl:", sl, " price:",last_kline["Close"])
-            if(self.rsi_out_cnt > 2): return
-            self.rsi_out_cnt += 1
+        if(self.macd.iloc[-1] > self.macdsignal.iloc[-1] and self.rsi.iloc[-1] < self.os_rsi + 10):
+            trading_flag = 1
+        if (self.macd.iloc[-1] < self.macdsignal.iloc[-1] and self.rsi.iloc[-1] > self.ob_rsi - 10):
+            trading_flag = -1
+        if(trading_flag == 0): return
+        point = self.trader.get_point() * 2
+        if(point < 0.0002 * last_kline["Close"]): 
+            point = 0.0002 * last_kline["Close"]
+        elif(point > 0.001 * last_kline["Close"]):
+            point = 0.001 * last_kline["Close"]
+        # if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+        #     return
+        #BUY
+        if trading_flag == 1 : 
+            temp = abs(last_kline["Close"] - self.up_trend_line[1][1])
+            print(point, temp)
+            if point > temp:
+                # return
+                tp = point * 2 + last_kline["Close"]
+                sl = -point * 1 + last_kline["Close"]
+            else:
+                tp = temp * 2 + last_kline["Close"]
+                sl= -temp * 1 + last_kline["Close"]
             order = Order(
                 OrderType.MARKET,
                 OrderSide.BUY,
@@ -212,8 +246,8 @@ class RSIDevergenceStrategy(BaseStrategy):
                 status=OrderStatus.FILLED,
             )
             order["FILL_TIME"] = last_kline["Open time"]
-            order["trading_entry"] = last_kline["Close"]
             order["strategy"] = self.name
+            order["trading_price"] = last_kline["Close"]
             order["description"] = self.description
             order["desc"] = {
                 "up_trend_line": self.up_trend_line,
@@ -223,26 +257,29 @@ class RSIDevergenceStrategy(BaseStrategy):
             if order:
                 self.trader.create_trade(order, self.volume)
                 self.orders_opening.append(order)
-        elif (rsi >= self.ob_rsi):
-            if(abs(last_kline["Close"] - self.down_trend_line[1][1]) > amount):
-                amount  = abs(last_kline["Close"] - self.down_trend_line[1][1])
-            tp = -4 * amount + last_kline["Close"]
-            sl = 2 * amount + last_kline["Close"]
-            # print("SELL", "sl:", sl, " price:",last_kline["Close"])
-            if(self.rsi_out_cnt < -2): return
-            self.rsi_out_cnt -= 1
+        
+        if trading_flag == -1 : 
+            temp = abs(last_kline["Close"] - self.down_trend_line[1][1])
+            print(point, temp)
+            if point > temp:
+                # return
+                tp = point * 2 + last_kline["Close"]
+                sl = -point * 1 + last_kline["Close"]
+            else:
+                tp = temp * 2 + last_kline["Close"]
+                sl= -temp * 1 + last_kline["Close"]
             order = Order(
                 OrderType.MARKET,
-                OrderSide.SELL,
+                OrderSide.BUY,
                 last_kline["Close"],
                 tp=tp,
                 sl=sl,
                 status=OrderStatus.FILLED,
             )
             order["FILL_TIME"] = last_kline["Open time"]
-            order["trading_entry"] = last_kline["Close"]
             order["strategy"] = self.name
-            order["description"] = self.description
+            order["trading_price"] = last_kline["Close"]
+            order["description"] = "RSI_MACD"
             order["desc"] = {
                 "up_trend_line": self.up_trend_line,
                 "down_trend_line": self.down_trend_line,
@@ -251,59 +288,96 @@ class RSIDevergenceStrategy(BaseStrategy):
             if order:
                 self.trader.create_trade(order, self.volume)
                 self.orders_opening.append(order)
-
+    
     def check_close_signal(self):
         self.check_close_reverse()
-
-    def check_close_reverse(self):
-        # check close reverse order (buy order has uptrend downward)
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-       
-        rsi = ta.stream.SMA(self.rsi, 2)
-        for i in range(len(self.orders_opening) - 1, -1, -1):
-            order = self.orders_opening[i]
-            if(rsi < self.os_rsi or last_kline["Close"] > order["trading_entry"] * 1.001):
-                if order.side == OrderSide.BUY:
-                    continue
-                desc = order["desc"]
-                order["desc"]["stop_idx"] = len(chart) - 1
-                order["desc"]["y"] = last_kline["Close"]
-                order["description"] = self.description
-                order.close(last_kline)
-                self.trader.close_trade(order)
-                if order.is_closed():
-                    self.orders_closed.append(order)
-                del self.orders_opening[i]
-            elif(rsi > self.ob_rsi or last_kline["Close"] * 1.001 < order["trading_entry"]):
+        if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
+            return
+        if last_kline["Close"] < last_kline["Open"]:
+            # red kline, check close buy orders
+            if (last_kline["High"] - last_kline["Close"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
+                return
+            for i in range(len(self.orders_opening) - 1, -1, -1):
+                order = self.orders_opening[i]
                 if order.side == OrderSide.SELL:
                     continue
                 desc = order["desc"]
-                order["desc"]["stop_idx"] = len(chart) - 1
-                order["desc"]["y"] = last_kline["Close"]
-                order["description"] = self.description
-                order.close(last_kline)
-                self.trader.close_trade(order)
-                if order.is_closed():
-                    self.orders_closed.append(order)
-                del self.orders_opening[i]
+                up_trend_line = desc["up_trend_line"]
+                down_trend_line = desc["down_trend_line"]
+                y_up = get_y_on_line(up_trend_line, len(chart) - 1)
+                if last_kline["Close"] < y_up:
+                    order["desc"]["stop_idx"] = len(chart) - 1
+                    order["desc"]["y"] = y_up
+                    order["description"] = self.description
+                    order.close(last_kline)
+                    self.trader.close_trade(order)
+                    if order.is_closed():
+                        self.orders_closed.append(order)
+                    del self.orders_opening[i]
+        else:
+            # green kline, check close sell orders
+            if (last_kline["Close"] - last_kline["Low"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
+                return
+            for i in range(len(self.orders_opening) - 1, -1, -1):
+                order = self.orders_opening[i]
+                if order.side == OrderSide.BUY:
+                    continue
+                desc = order["desc"]
+                up_trend_line = desc["up_trend_line"]
+                down_trend_line = desc["down_trend_line"]
+                y_down = get_y_on_line(down_trend_line, len(chart) - 1)
+                if last_kline["Close"] > y_down:
+                    order["desc"]["stop_idx"] = len(chart) - 1
+                    order["desc"]["y"] = y_down
+                    order["description"] = self.description
+                    order.close(last_kline)
+                    self.trader.close_trade(order)
+                    if order.is_closed():
+                        self.orders_closed.append(order)
+                    del self.orders_opening[i]
 
-        # elif( rsi > self.ob_rsi):
-        #     for i in range(len(self.orders_opening) - 1, -1, -1):
-        #         order = self.orders_opening[i]
-        #         if order.side == OrderSide.SELL:
-        #             continue
-        #         desc = order["desc"]
-        #         down_trend_line = desc["down_trend_line"]
-        #         if down_trend_line[0][1] <= down_trend_line[1][1] * 1.002:
-        #             order["desc"]["stop_idx"] = len(chart) - 1
-        #             order["desc"]["y"] = last_kline["Close"]
-        #             order["description"] = self.description
-        #             order.close(last_kline)
-        #             self.trader.close_trade(order)
-        #             if order.is_closed():
-        #                 self.orders_closed.append(order)
-        #             del self.orders_opening[i]
+    def check_close_reverse(self):
+        # check close reverse order (buy order has uptrend downward)
+        if len(self.main_zz_idx) < 3:
+            return
+        chart = self.tfs_chart[self.tf]
+        last_kline = chart.iloc[-1]
+        if self.zz_points[self.main_zz_idx[-1]].ptype == mta.POINT_TYPE.PEAK_POINT:
+            if self.zz_points[self.main_zz_idx[-1]].pline.high < self.zz_points[self.main_zz_idx[-3]].pline.high:
+                for i in range(len(self.orders_opening) - 1, -1, -1):
+                    order = self.orders_opening[i]
+                    if order.side == OrderSide.SELL:
+                        continue
+                    desc = order["desc"]
+                    up_trend_line = desc["up_trend_line"]
+                    if up_trend_line[0][1] * 1.005 >= up_trend_line[1][1]:
+                        order["desc"]["stop_idx"] = len(chart) - 1
+                        order["desc"]["y"] = last_kline["Close"]
+                        order["description"] = self.description
+                        order.close(last_kline)
+                        self.trader.close_trade(order)
+                        if order.is_closed():
+                            self.orders_closed.append(order)
+                        del self.orders_opening[i]
+        else:
+            if self.zz_points[self.main_zz_idx[-1]].pline.low > self.zz_points[self.main_zz_idx[-3]].pline.low:
+                for i in range(len(self.orders_opening) - 1, -1, -1):
+                    order = self.orders_opening[i]
+                    if order.side == OrderSide.BUY:
+                        continue
+                    desc = order["desc"]
+                    down_trend_line = desc["down_trend_line"]
+                    if down_trend_line[0][1] <= down_trend_line[1][1] * 1.005:
+                        order["desc"]["stop_idx"] = len(chart) - 1
+                        order["desc"]["y"] = last_kline["Close"]
+                        order["description"] = self.description
+                        order.close(last_kline)
+                        self.trader.close_trade(order)
+                        if order.is_closed():
+                            self.orders_closed.append(order)
+                        del self.orders_opening[i]
 
     def adjust_sl(self):
         last_main_zz = self.zz_points[self.main_zz_idx[-1]]

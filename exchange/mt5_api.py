@@ -1,6 +1,6 @@
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import MetaTrader5 as mt5
 
@@ -31,6 +31,9 @@ class MT5API:
         else:
             print("[-] Login failed, check account infor")
             return False
+    def delta_time(self, symbol="EURUSD"):
+        tick = mt5.symbol_info_tick(symbol)
+        return (datetime.fromtimestamp(tick.time, tz=timezone.utc) - datetime.now(timezone.utc)).total_seconds()
 
     def round_price(self, symbol, price):
         symbol_info = mt5.symbol_info(symbol)
@@ -56,7 +59,7 @@ class MT5API:
         )
         # print(mt5.last_error())
         df = pd.DataFrame(symbol_rates)
-        df["time"] += -time.timezone
+        df["time"] += -time.timezone- self.delta_time()
         df["time"] = pd.to_datetime(df["time"], unit="s")
         df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
         df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
@@ -71,7 +74,7 @@ class MT5API:
         )
         df = pd.DataFrame(symbol_rates)
         if len(df)==0: return False
-        df["time"] += -time.timezone
+        df["time"] += -time.timezone- self.delta_time()
         df["time"] = pd.to_datetime(df["time"], unit="s")
         df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
         df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
@@ -84,7 +87,7 @@ class MT5API:
         )
         df = pd.DataFrame(symbol_rates)
         if len(df)==0: return []
-        df["time"] += -time.timezone
+        df["time"] += -time.timezone- self.delta_time()
         df["time"] = pd.to_datetime(df["time"], unit="s")
         df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
         df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]

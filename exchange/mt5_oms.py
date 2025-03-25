@@ -202,8 +202,8 @@ class MT5OMS:
         return pd.DataFrame(total_deals)
     
     def get_income_history(self, from_time,to_time, group="*"):
-        from_time = from_time + timedelta(seconds=-time.timezone)
-        to_time = to_time + timedelta(seconds=-time.timezone)
+        # from_time = from_time + timedelta(seconds=-time.timezone)
+        # to_time = to_time + timedelta(seconds=-time.timezone)
         result = self.mt5_api.history_deals_get(from_time, to_time, group=group)
         df=[]
         if result:

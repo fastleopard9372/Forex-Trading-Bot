@@ -186,10 +186,6 @@ class BreakStrategy(BaseStrategy):
 
     def check_signal(self):
         
-        self.delta_price_ratio = 0.02
-        self.min_updown_ratio = 1.0
-        self.n_trend_point = 5
-        
         chart = self.tfs_chart[self.tf]
         # chart = self.tfs_chart[self.tf].iloc[-800:].reset_index(drop=True)
         last_kline = chart.iloc[-1]

@@ -4,8 +4,11 @@ import logging
 import json
 import shutil
 from typing import List
+import MetaTrader5 as mt5
 import pandas as pd
 from trader import Trader
+import threading
+import time
 from utils import tf_cron, NUM_KLINE_INIT, CANDLE_COLUMNS
 from utils import get_pretty_table
 
@@ -13,37 +16,38 @@ from utils import get_pretty_table
 bot_logger = logging.getLogger("bot_logger")
 
 
-class BackTest:
-    def __init__(self, exch, symbols_trading_cfg_file, data_dir):
+class BackTestEngine:
+    def __init__(self, exch, symbols_trading_cfg_file, data_dir, start_date=None, end_date=None):
         self.exch = exch
         self.data_dir = data_dir
         self.bot_traders: List[Trader] = []
         self.symbols_trading_cfg_file = symbols_trading_cfg_file
         self.debug_dir = os.environ["DEBUG_DIR"]
+        self.thread = None,
+        self.from_date = start_date
+        self.to_date = end_date
+        self.start_flag = False
 
-    def load_mt5_klines_monthly_data(self, symbol, interval, month, year):
-        csv_data_path = os.path.join(self.data_dir, "{}-{}-{}-{:02d}.csv".format(symbol, interval, year, month))
-        
-        df = pd.read_csv(csv_data_path, sep='\t')
-        #df["Open time"] = pd.to_datetime(df["Open time"])
-        new_header = ['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Tick Volume', 'Volume', 'Spread']
+    def get_klines_data(self, symbol, interval, start_date, end_date):
+        tf = getattr(mt5, "TIMEFRAME_" + (interval[-1:] + interval[:-1]).upper())
+        print(f"Fetching {symbol} {interval} data from {self.from_date} to {self.to_date}...")
+        self.from_date = start_date
+        self.to_date = end_date
+        mt5.initialize()
+        rates = mt5.copy_rates_range(symbol, tf, self.from_date, self.to_date)
+        mt5.shutdown()
+        # Check if data was retrieved
+        if rates is None:
+            print(f"Failed to retrieve data for {symbol}, error code:", mt5.last_error())
+            mt5.shutdown()
+            quit()
+
+        # Convert data to pandas DataFrame
+        df = pd.DataFrame(rates)
+        new_header = ['Open time', 'Open', 'High', 'Low', 'Close', 'Tick Volume', 'Spread', 'Volume']
         df.columns = new_header
-        
-        df['Open time'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+        df['Open time'] = pd.to_datetime(df['Open time'],unit='s')
         return df
-        try:
-            df = pd.read_csv(csv_data_path)
-            df["Open time"] = pd.to_datetime(df["Open time"])
-            return df
-        except FileNotFoundError:
-            df = pd.DataFrame()
-            df.to_csv(csv_data_path, index=False)
-            return df
-        except Exception as e:
-         print(f"An error occurred: {e}")
-
-    def load_klines_monthly_data(self, symbol, interval, month, year):
-        return self.load_mt5_klines_monthly_data(symbol, interval, month, year)
 
     def backtest_bot_trader(self, symbol_cfg):
         bot_trader = Trader(symbol_cfg)
@@ -51,11 +55,9 @@ class BackTest:
         tfs_chart = {}
         # Load kline data for all required timeframes
         for tf in bot_trader.get_required_tfs():
-            print(bot_trader.get_required_tfs())
             chart_df = pd.concat(
                 [
-                    self.load_klines_monthly_data(symbol_cfg["symbol"], tf, month, symbol_cfg["year"])
-                    for month in sorted(symbol_cfg["months"])
+                    self.get_klines_data(symbol_cfg["symbol"], tf, self.from_date, self.to_date)
                 ],
                 ignore_index=True,
             )
@@ -74,7 +76,7 @@ class BackTest:
 
         timer = max_time
         end_time = end_time
-        bot_logger.info("   [+] Start timer from: {} to {}".format(timer, end_time))
+        print("   [+] Start timer from: {} to {}".format(timer, end_time))
         required_tfs = [tf for tf in tf_cron.keys() if tf in bot_trader.get_required_tfs()]
         # c = 0
         while timer <= end_time:
@@ -87,34 +89,43 @@ class BackTest:
                 ):
                     last_kline = tfs_chart[tf][:1]
                     tfs_chart[tf] = tfs_chart[tf][1:]
-                    bot_trader.on_kline(tf, last_kline)
                     print(timer)
+                    bot_trader.on_kline(tf, last_kline)
             # c += 1
             # if c > 1000:
             #     break
+                if(self.start_flag == False): return bot_trader
         return bot_trader
-
+    
     def start(self):
+        if self.start_flag == False:  
+            self.start_flag = True  
+            self.thread = threading.Thread(target=self.start_backtest)
+            self.thread.start()
+        return self.start_flag
+    
+    def stop(self):
+        self.start_flag = False
+        time.sleep(3)  # Give some time for the thread to finish
+        return self.backtest_result()
+            
+    def start_backtest(self):
         with open(self.symbols_trading_cfg_file) as f:
             symbols_config = json.load(f)
-        c = 0
-        bot_logger.info("[*] Start backtesting ...")
+        print("[*] Start backtesting ...")
         
         for symbol_cfg in symbols_config:
-            bot_logger.info("[+] Backtest bot for symbol: {}".format(symbol_cfg["symbol"]))
+            print("[+] Backtest bot for symbol: {}".format(symbol_cfg["symbol"]))
             bot_trader = self.backtest_bot_trader(symbol_cfg)
             self.bot_traders.append(bot_trader)
-            # c += 1
-            # if c >= 2:
-            #     break
-        bot_logger.info("[*] Backtesting finished")
+        print("[*] Backtesting finished")
+        self.start_flag = False
 
-    def summary_trade_result(self):
+    def backtest_result(self):
         final_backtest_stats = []
         for bot_trader in self.bot_traders:
-            bot_trader.close_opening_orders()
             backtest_stats = bot_trader.statistic_trade()
-            bot_logger.info(get_pretty_table(backtest_stats, bot_trader.get_symbol_name(), transpose=True, tran_col="NAME"))
+            print(get_pretty_table(backtest_stats, bot_trader.get_symbol_name(), transpose=True, tran_col="NAME"))
             backtest_stats.loc[len(backtest_stats) - 1, "NAME"] = bot_trader.get_symbol_name()
             final_backtest_stats.append(backtest_stats.loc[len(backtest_stats) - 1 :])
 
@@ -125,8 +136,25 @@ class BackTest:
         s = table_stats.sum(axis=0)
         table_stats.loc[len(table_stats)] = s
         table_stats.loc[len(table_stats) - 1, "NAME"] = "TOTAL"
-        bot_logger.info(get_pretty_table(table_stats, "SUMMARY", transpose=True, tran_col="NAME"))
+        print(get_pretty_table(table_stats, "SUMMARY", transpose=True, tran_col="NAME"))
+        return table_stats
+    
+    def summary_trade_result(self):
+        final_backtest_stats = []
+        for bot_trader in self.bot_traders:
+            bot_trader.close_opening_orders()
+            backtest_stats = bot_trader.statistic_trade()
+            print(get_pretty_table(backtest_stats, bot_trader.get_symbol_name(), transpose=True, tran_col="NAME"))
+            backtest_stats.loc[len(backtest_stats) - 1, "NAME"] = bot_trader.get_symbol_name()
+            final_backtest_stats.append(backtest_stats.loc[len(backtest_stats) - 1 :])
+
+            bot_trader.log_orders()
+            bot_trader.plot_strategy_orders()
+
+        table_stats = pd.concat(final_backtest_stats, axis=0, ignore_index=True)
+        s = table_stats.sum(axis=0)
+        table_stats.loc[len(table_stats)] = s
+        table_stats.loc[len(table_stats) - 1, "NAME"] = "TOTAL"
+        print(get_pretty_table(table_stats, "SUMMARY", transpose=True, tran_col="NAME"))
         return table_stats
 
-    def stop(self):
-        pass

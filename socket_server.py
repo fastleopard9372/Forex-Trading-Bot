@@ -6,7 +6,7 @@ import argparse
 import logging
 import logging.config
 from trade_engine import TradeEngine
-from backtest import BackTest
+from backtest_engine import BackTestEngine
 from datetime import datetime, timedelta, timezone
 from utils import datetime_to_filename
 
@@ -27,8 +27,10 @@ def config_logging(exchange):
 parser = None
 args = None
 trade_engine = None
+backtest_engine = None
 trade_init_flag = False
 trade_start_flag = False
+backtest_engine_start_flag = False
 
 def set_config(args):
     global trade_engine
@@ -74,6 +76,7 @@ def get_candlestick():
 
     return jsonify(candlestick)
 
+@app.route('/api/start_trade', methods=['POST'])
 def create_candlestick(starttime, endtime, trades):
     filtered_trades = [trade for trade in trades if starttime <= trade['timestamp'] <= endtime]
     if not filtered_trades:
@@ -100,9 +103,41 @@ def handle_connect():
     print('Client connected')
     emit('message', {'data': 'Connected to server'})
 
+@socketio.on('start_backtest')
+def handle_start_backtest(data):
+    global backtest_engine
+    global backtest_engine_start_flag
+    from_date = data.get('from_date')
+    from_date = datetime.strptime(from_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    from_date = from_date.replace(tzinfo=timezone.utc)
+    to_date = data.get('to_date')
+    to_date = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    to_date = to_date.replace(tzinfo=timezone.utc)
+    if backtest_engine_start_flag:
+        emit('backtest_status', {'error': 'Backtest engine is already running'})
+        return
+    # Initialize backtest engine)
+    backtest_engine = BackTestEngine(args.exch, args.sym_cfg_file, args.data_dir, from_date, to_date)
+    backtest_engine_start_flag = True
+    backtest_engine.start()
+    emit('backtest_status', {'status': 'Backtesting started'})
+
+@socketio.on('stop_backtest')
+def handle_stop_backtest():
+    global backtest_engine
+    global backtest_engine_start_flag
+    if backtest_engine_start_flag:
+        data = backtest_engine.stop()
+        backtest_engine_start_flag = False
+        emit('backtest_status', {'status': 'Backtesting stopped', 'data':data})
+    else:
+        emit('backtest_status', {'error': 'Backtest engine is not running'})
+
 @socketio.on('start_trade')
 def handle_start_trade():
     global trade_start_flag
+    trade_engine = TradeEngine(args.exch, args.exch_cfg_file, args.sym_cfg_file)
+    trade_init_flag = trade_engine.init()
     if trade_init_flag:
         trade_start_flag = True
         trade_engine.start()
@@ -110,6 +145,7 @@ def handle_start_trade():
     else:
         trade_start_flag = False
         emit('trade_status', {'error': 'Failed to initialize trading engine'})
+
 @socketio.on('stop_trade')
 def handle_stop_trade():
     global trade_start_flag
@@ -122,8 +158,6 @@ def handle_stop_trade():
 
 @socketio.on('get_trading_history')
 def handle_get_trading_history(data):
-    # to_date = datetime(data.get('to_date'))+timedelta(seconds=-time.timezone).date()
-    # from_date = datetime(data.get('from_date'))+timedelta(seconds=-time.timezone).date()
     from_date = data.get('from_date')
     from_date = datetime.strptime(from_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     from_date = from_date.replace(tzinfo=timezone.utc)
@@ -131,7 +165,7 @@ def handle_get_trading_history(data):
     to_date = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     to_date = to_date.replace(tzinfo=timezone.utc)
     symbol = data.get('symbol', "EURUSD")
-    history = trade_engine.log_income_history(symbol, from_date, to_date)
+    history = trade_engine.log_income_history(from_date, to_date,symbol)
     
     if len(history) > 0:
         history_data = history.to_json(orient="records")
@@ -141,9 +175,9 @@ def handle_get_trading_history(data):
 
 @socketio.on('get_profit_loss')
 def handle_get_profit_loss(data):
-    
     symbol = data.get('symbol', "EURUSD")
     now = datetime.now()
+    now = now.replace(tzinfo=timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday_start = today_start - timedelta(days=1)
     week_start = today_start - timedelta(days=today_start.weekday())
@@ -204,7 +238,6 @@ def handle_get_kline(data):
     to_date = data.get('to_date')
     to_date = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     to_date = to_date.replace(tzinfo=timezone.utc)
-    
     if length == 0:
         kline = trade_engine.klinesDate(symbol, interval, from_date, to_date)
     else:
@@ -223,7 +256,7 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Socket server for trading engine")
-    parser.add_argument("--mode", type=str, default="live", help="Mode of operation (live/backtest)")
+    # parser.add_argument("--mode", type=str, default="live", help="Mode of operation (live/backtest)")
     parser.add_argument("--exch", type=str, default="mt5", help="Exchange name")
     parser.add_argument("--exch_cfg_file", type=str, default="configs/exchange_config.json", help="Exchange config file")
     parser.add_argument("--sym_cfg_file", type=str, default="configs/symbols_trading_config.json", help="Symbols trading config file")
@@ -232,4 +265,7 @@ if __name__ == '__main__':
     set_config(args)
     trade_engine = TradeEngine(args.exch, args.exch_cfg_file, args.sym_cfg_file)
     trade_init_flag = trade_engine.init()
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000)    
+
+    # py main.py --mode live --exch mt5 --exch_cfg_file configs/exchange_config.json --sym_cfg_file configs/symbols_trading_config.json
+    # py main.py --mode test --exch mt5 --exch_cfg_file configs/exchange_config.json --sym_cfg_file configs/symbols_trading_config.json --data_dir D:\MT5_Data

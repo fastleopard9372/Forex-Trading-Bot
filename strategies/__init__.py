@@ -4,6 +4,7 @@ from .rsi_hidden_divergence import RSIDivergence
 from .macd_divergence import MACDDivergence
 from .rsi_divergence_strategy import RSIDevergenceStrategy
 from .rsi_regular_divergence import RSIRegularDivergence
+from .rsi_macd import RsiMacd
 from .break_strategy import BreakStrategy
 from .price_action import PriceAction
 from .trend_following import TrendFollowing
