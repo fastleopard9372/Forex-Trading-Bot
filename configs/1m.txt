@@ -1,4 +1,11 @@
 {
+    "mt5": {
+        "account": 5034318991,
+        "server": "MetaQuotes-Demo"
+    }
+}
+
+{
         "symbol": "EURUSD",
         "strategies": [
             {

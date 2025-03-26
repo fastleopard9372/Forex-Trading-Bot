@@ -27,6 +27,7 @@ class RSIDevergenceStrategy(BaseStrategy):
         self.rsi_len = self.params["rsi_len"]
         self.ob_rsi = self.params["ob_rsi"]
         self.os_rsi = self.params["os_rsi"]
+        self.rsi_cnt = []
 
     def attach(self, tfs_chart):
         self.tfs_chart = tfs_chart
@@ -159,9 +160,9 @@ class RSIDevergenceStrategy(BaseStrategy):
         super().close_opening_orders(self.tfs_chart[self.tf].iloc[-1])
         
     def check_signal(self):
+        # print("RSI")
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        print(last_kline["Volume"] , self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1])
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         idx = 1
@@ -171,7 +172,6 @@ class RSIDevergenceStrategy(BaseStrategy):
             idx += 1
         n_last_poke_points = []
         n_last_peak_points = []
-        print(idx, len(chart[self.zz_points[-idx].pidx : -1]))
         if(len(chart[self.zz_points[-idx].pidx : -1]) < 2): return
         for i, kline in chart[self.zz_points[-idx].pidx : -1].iterrows():
             n_last_poke_points.append((i, kline["Low"]))
@@ -183,26 +183,23 @@ class RSIDevergenceStrategy(BaseStrategy):
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
-        # macd, macdsignal, macdhist = ta.stream.MACD(
-        #     chart["Close"],
-        #     6,
-        #     13,
-        #     5,
-        # )
-        rsi = ta.stream.SMA(self.rsi, 2)
-        amount = self.trader.get_point() * 4
-        print("point:", amount)
-        if(amount < 0.0002 * last_kline["Close"]): amount = 0.0002 * last_kline["Close"]
-        if(amount > 0.001 * last_kline["Close"]): amount = 0.001 * last_kline["Close"]
-
+        
+        rsi = self.rsi.iloc[-1]
+        # if(len(self.rsi) > 2):
+        #     rsi = (self.rsi.iloc[-2] * 3 + self.rsi.iloc[-2] * 2 + self.rsi.iloc[-1])/6
+        amount = self.trader.get_point()/2
+        # print(amount)
         if(rsi <= self.os_rsi):
+            if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+                return
             if(abs(last_kline["Close"] - self.up_trend_line[1][1]) > amount):
                 amount  = abs(last_kline["Close"] - self.up_trend_line[1][1])
-            tp = 4 * amount + last_kline["Close"]
-            sl = -2 * amount + last_kline["Close"]
+            tp = 2 * amount + last_kline["Close"]
+            sl = -1 * amount + last_kline["Close"]
             # print("BUY", "sl:", sl, " price:",last_kline["Close"])
-            if(self.rsi_out_cnt > 2): return
-            self.rsi_out_cnt += 1
+            if(sum(self.rsi_cnt) > 1): return
+            self.rsi_cnt.append(1)
+            if(len(self.rsi_cnt) == 4): self.rsi_cnt.pop(0)
             order = Order(
                 OrderType.MARKET,
                 OrderSide.BUY,
@@ -224,13 +221,16 @@ class RSIDevergenceStrategy(BaseStrategy):
                 self.trader.create_trade(order, self.volume)
                 self.orders_opening.append(order)
         elif (rsi >= self.ob_rsi):
+            if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+                return
             if(abs(last_kline["Close"] - self.down_trend_line[1][1]) > amount):
                 amount  = abs(last_kline["Close"] - self.down_trend_line[1][1])
-            tp = -4 * amount + last_kline["Close"]
-            sl = 2 * amount + last_kline["Close"]
+            tp = -2 * amount + last_kline["Close"]
+            sl = 1 * amount + last_kline["Close"]
             # print("SELL", "sl:", sl, " price:",last_kline["Close"])
-            if(self.rsi_out_cnt < -2): return
-            self.rsi_out_cnt -= 1
+            if(sum(self.rsi_cnt) < -1): return
+            self.rsi_cnt.append(-1)
+            if(len(self.rsi_cnt) == 4): self.rsi_cnt.pop(0)
             order = Order(
                 OrderType.MARKET,
                 OrderSide.SELL,
@@ -259,11 +259,11 @@ class RSIDevergenceStrategy(BaseStrategy):
         # check close reverse order (buy order has uptrend downward)
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-       
-        rsi = ta.stream.SMA(self.rsi, 2)
+        rsi = self.rsi.iloc[-1]
         for i in range(len(self.orders_opening) - 1, -1, -1):
             order = self.orders_opening[i]
-            if(rsi < self.os_rsi or last_kline["Close"] > order["trading_entry"] * 1.001):
+            # print(rsi , self.ob_rsi , last_kline["Close"] , order["trading_entry"])
+            if(rsi < self.os_rsi and last_kline["Close"] * 1.00015 < order["trading_entry"]):
                 if order.side == OrderSide.BUY:
                     continue
                 desc = order["desc"]
@@ -275,7 +275,7 @@ class RSIDevergenceStrategy(BaseStrategy):
                 if order.is_closed():
                     self.orders_closed.append(order)
                 del self.orders_opening[i]
-            elif(rsi > self.ob_rsi or last_kline["Close"] * 1.001 < order["trading_entry"]):
+            elif(rsi > self.ob_rsi and last_kline["Close"] > order["trading_entry"] * 1.00015):
                 if order.side == OrderSide.SELL:
                     continue
                 desc = order["desc"]

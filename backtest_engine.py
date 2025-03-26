@@ -89,7 +89,7 @@ class BackTestEngine:
                 ):
                     last_kline = tfs_chart[tf][:1]
                     tfs_chart[tf] = tfs_chart[tf][1:]
-                    print(timer)
+                    # print(timer)
                     bot_trader.on_kline(tf, last_kline)
             # c += 1
             # if c > 1000:

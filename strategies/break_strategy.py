@@ -174,10 +174,9 @@ class BreakStrategy(BaseStrategy):
         super().close_opening_orders(self.tfs_chart[self.tf].iloc[-1])
 
     def check_signal(self):
-        print("Break")
+        # print("Break")
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        print(last_kline["Volume"] , self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1])
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         idx = 1
@@ -208,18 +207,17 @@ class BreakStrategy(BaseStrategy):
         if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
             return
         
-        sma = ta.stream.SMA(chart["Close"], 50)
+        sma = ta.stream.SMA(chart["Close"], 5)
         n_df = chart[self.zz_points[-idx].pidx : -1]
-        point = self.trader.get_point() * 2
-        if(point < 0.0002 * last_kline["Close"]): point = 0.0002 * last_kline["Close"]
+        point = self.trader.get_point()/2
+        # print(point)
         # if self.zz_points[-1].ptype == mta.POINT_TYPE.POKE_POINT:
         # green kkline
-        if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
-            return
         y_down_pct = get_y_on_line(self.down_trend_line, self.down_trend_line[1][0] + 1)
-        if self.macd.iloc[-1] > self.macdsignal.iloc[-1] and y_down_pct < last_kline["Close"] and last_kline["Close"] > sma :
+        if self.macd.iloc[-1] > self.macdsignal.iloc[-1] and y_down_pct < last_kline["Close"]  :
+            if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+                return
             temp = abs(last_kline["Close"] - self.up_trend_line[1][1])
-            print(point, temp)
             if point > temp:
                 # return
                 tp = point * 2 + last_kline["Close"]
@@ -237,6 +235,7 @@ class BreakStrategy(BaseStrategy):
             )
             order["FILL_TIME"] = last_kline["Open time"]
             order["strategy"] = self.name
+            order["trading_price"] = last_kline["Close"]
             order["description"] = self.description
             order["desc"] = {
                 "up_trend_line": self.up_trend_line,
@@ -249,58 +248,66 @@ class BreakStrategy(BaseStrategy):
     
     # elif self.zz_points[-1].ptype == mta.POINT_TYPE.PEAK_POINT:
         # red kkline
-        if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
-            return
         y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
-        if self.macd.iloc[-1] < self.macdsignal.iloc[-1] and y_up_pct > last_kline["Close"] and last_kline["Close"] < sma:
-                temp = abs(self.down_trend_line[1][1] - last_kline["Close"])
-                print(point, temp)
-                if point > temp:
-                    # return
-                    tp = -point * 2 + last_kline["Close"]
-                    sl = point * 1 + last_kline["Close"]
-                else:
-                    tp = -temp * 2 + last_kline["Close"]
-                    sl = temp * 1 + last_kline["Close"]
-                order = Order(
-                    OrderType.MARKET,
-                    OrderSide.SELL,
-                    last_kline["Close"],
-                    tp=tp,
-                    sl=sl,
-                    status=OrderStatus.FILLED,
-                )
-                order["FILL_TIME"] = last_kline["Open time"]
-                order["strategy"] = self.name
-                order["description"] = self.description
-                order["desc"] = {
-                    "up_trend_line": self.up_trend_line,
-                    "down_trend_line": self.down_trend_line,
-                }
-                order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
-                if order:
-                    self.trader.create_trade(order, self.volume)
-                    self.orders_opening.append(order)
+        if self.macd.iloc[-1] < self.macdsignal.iloc[-1] and y_up_pct > last_kline["Close"]:
+            if (last_kline["Close"] - last_kline["Low"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):
+                return
+            temp = abs(self.down_trend_line[1][1] - last_kline["Close"])
+            if point > temp:
+                # return
+                tp = -point * 2 + last_kline["Close"]
+                sl = point * 1 + last_kline["Close"]
+            else:
+                tp = -temp * 2 + last_kline["Close"]
+                sl = temp * 1 + last_kline["Close"]
+            order = Order(
+                OrderType.MARKET,
+                OrderSide.SELL,
+                last_kline["Close"],
+                tp=tp,
+                sl=sl,
+                status=OrderStatus.FILLED,
+            )
+            order["FILL_TIME"] = last_kline["Open time"]
+            order["strategy"] = self.name
+            order["trading_price"] = last_kline["Close"]
+            order["description"] = self.description
+            order["desc"] = {
+                "up_trend_line": self.up_trend_line,
+                "down_trend_line": self.down_trend_line,
+            }
+            order = self.trader.fix_order(order, self.params["sl_fix_mode"], self.max_sl_pct)
+            if order:
+                self.trader.create_trade(order, self.volume)
+                self.orders_opening.append(order)
 
     def check_close_signal(self):
-        self.check_close_reverse()
+        # self.check_close_reverse() 
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
+        point = self.trader.get_point()/2
+        rsi = ta.RSI(chart["Close"][-40:], 5)
+        rsi = ta.stream.MA(rsi,3)
         if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         if last_kline["Close"] < last_kline["Open"]:
             # red kline, check close buy orders
-            if (last_kline["High"] - last_kline["Close"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
-                return
+            # if (last_kline["High"] - last_kline["Close"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
+            #     return
             for i in range(len(self.orders_opening) - 1, -1, -1):
                 order = self.orders_opening[i]
                 if order.side == OrderSide.SELL:
                     continue
+                a_dt = order["FILL_TIME"]
+                b_dt = last_kline["Open time"]
+                difference = b_dt - a_dt
+                dif_mins = difference.total_seconds() / 60
+                
                 desc = order["desc"]
                 up_trend_line = desc["up_trend_line"]
                 down_trend_line = desc["down_trend_line"]
                 y_up = get_y_on_line(up_trend_line, len(chart) - 1)
-                if last_kline["Close"]*1.001 < y_up:
+                if (last_kline["Close"]*1.001 < y_up or rsi > 70  ) and order["trading_price"] + point < last_kline["Close"]:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = y_up
                     order["description"] = self.description
@@ -309,19 +316,34 @@ class BreakStrategy(BaseStrategy):
                     if order.is_closed():
                         self.orders_closed.append(order)
                     del self.orders_opening[i]
+                # elif (dif_mins > 50):
+                #     order["desc"]["stop_idx"] = len(chart) - 1
+                #     order["desc"]["y"] = y_up
+                #     order["description"] = self.description
+                #     order.close(last_kline)
+                #     self.trader.close_trade(order)
+                #     if order.is_closed():
+                #         self.orders_closed.append(order)
+                #     del self.orders_opening[i]
         else:
             # green kline, check close sell orders
-            if (last_kline["Close"] - last_kline["Low"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
-                return
+            # if (last_kline["Close"] - last_kline["Low"]) < 0.75 * (last_kline["High"] - last_kline["Low"]):
+            #     return
             for i in range(len(self.orders_opening) - 1, -1, -1):
                 order = self.orders_opening[i]
                 if order.side == OrderSide.BUY:
                     continue
+
+                a_dt = order["FILL_TIME"]
+                b_dt = last_kline["Open time"]
+                difference = b_dt - a_dt
+                dif_mins = difference.total_seconds() / 60
+                
                 desc = order["desc"]
                 up_trend_line = desc["up_trend_line"]
                 down_trend_line = desc["down_trend_line"]
                 y_down = get_y_on_line(down_trend_line, len(chart) - 1)
-                if last_kline["Close"] > y_down*1.001:
+                if (last_kline["Close"] > y_down*1.001  or rsi < 30 ) and order["trading_price"]  > last_kline["Close"] + point:
                     order["desc"]["stop_idx"] = len(chart) - 1
                     order["desc"]["y"] = y_down
                     order["description"] = self.description
@@ -330,6 +352,15 @@ class BreakStrategy(BaseStrategy):
                     if order.is_closed():
                         self.orders_closed.append(order)
                     del self.orders_opening[i]
+                # elif (dif_mins > 50):
+                #     order["desc"]["stop_idx"] = len(chart) - 1
+                #     order["desc"]["y"] = y_down
+                #     order["description"] = self.description
+                #     order.close(last_kline)
+                #     self.trader.close_trade(order)
+                #     if order.is_closed():
+                #         self.orders_closed.append(order)
+                #     del self.orders_opening[i]
 
     def check_close_reverse(self):
         # check close reverse order (buy order has uptrend downward)
