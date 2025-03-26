@@ -153,7 +153,7 @@ class RSIDevergenceStrategy(BaseStrategy):
         # update when new kline arrive
         super().update(tf)
         # check order signal
-        self.check_close_signal()
+        # self.check_close_signal()
         self.check_signal()
 
     def close_opening_orders(self):
@@ -260,10 +260,11 @@ class RSIDevergenceStrategy(BaseStrategy):
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
         rsi = self.rsi.iloc[-1]
+        amount = self.trader.get_point()
         for i in range(len(self.orders_opening) - 1, -1, -1):
             order = self.orders_opening[i]
             # print(rsi , self.ob_rsi , last_kline["Close"] , order["trading_entry"])
-            if(rsi < self.os_rsi and last_kline["Close"] * 1.00015 < order["trading_entry"]):
+            if(rsi < self.os_rsi and last_kline["Close"] + amount < order["trading_entry"]):
                 if order.side == OrderSide.BUY:
                     continue
                 desc = order["desc"]
@@ -275,7 +276,7 @@ class RSIDevergenceStrategy(BaseStrategy):
                 if order.is_closed():
                     self.orders_closed.append(order)
                 del self.orders_opening[i]
-            elif(rsi > self.ob_rsi and last_kline["Close"] > order["trading_entry"] * 1.00015):
+            elif(rsi > self.ob_rsi and last_kline["Close"] > order["trading_entry"] + amount):
                 if order.side == OrderSide.SELL:
                     continue
                 desc = order["desc"]

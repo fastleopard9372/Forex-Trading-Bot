@@ -20,13 +20,13 @@
                     "tf": "1m"
                 },
                 "max_sl_pct": 0.2,
-                "volume": 0.01
+                "volume": 0.02
             }
         ],
         "months": [
-            3
+            10,11,12
         ],
-        "year": 2020
+        "year": 2023
     },
     {
         "symbol": "EURUSD",
@@ -56,12 +56,12 @@
                     "tf": "1m"
                 },
                 "max_sl_pct": 0.2,
-                "volume": 0.01
+                "volume": 0.02
             }
         ],
         "months": [
-            3
+            10,11,12
         ],
-        "year": 2020
+        "year": 2023
     }
 ]
