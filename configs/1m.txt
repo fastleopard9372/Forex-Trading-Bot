@@ -1,11 +1,34 @@
-{
-    "mt5": {
-        "account": 5034318991,
-        "server": "MetaQuotes-Demo"
-    }
-}
-
-{
+[
+    {
+        "symbol": "EURUSD",
+        "strategies": [
+            {
+                "name": "rsi_divergence_strategy",
+                "params": {
+                    "min_num_cuml": 5,
+                    "min_zz_pct": 0.05,
+                    "zz_dev":2,
+                    "ma_vol": 5,
+                    "vol_ratio_ma": 0.4,
+                    "rsi_len": 5,
+                    "ob_rsi":70,
+                    "os_rsi":30,
+                    "kline_body_ratio": 0.2,
+                    "sl_fix_mode": "ADJ_SL"
+                },
+                "tfs": {
+                    "tf": "1m"
+                },
+                "max_sl_pct": 0.2,
+                "volume": 0.02
+            }
+        ],
+        "months": [
+            3
+        ],
+        "year": 2020
+    },
+    {
         "symbol": "EURUSD",
         "strategies": [
             {
@@ -33,11 +56,12 @@
                     "tf": "1m"
                 },
                 "max_sl_pct": 0.2,
-                "volume": 0.01
+                "volume": 0.02
             }
         ],
         "months": [
-            2
+            3
         ],
-        "year": 2022
-    },
+        "year": 2020
+    }
+]

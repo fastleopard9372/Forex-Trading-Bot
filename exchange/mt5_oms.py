@@ -25,6 +25,7 @@ class MT5OrderTemplate:
             "volume": self.volume,
             "type_filling": mt5.ORDER_FILLING_IOC,
             "type_time": mt5.ORDER_TIME_GTC,
+            "slippage": 5
         }
         if self.tp:
             params["tp"] = self.tp
@@ -44,6 +45,7 @@ class MT5OrderTemplate:
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": self.symbol,
             "volume": self.volume,
+            "slippage": 5,
             "position": None,
             "price": None,
             "type": mt5.ORDER_TYPE_BUY if self.order_side == OrderSide.SELL else mt5.ORDER_TYPE_SELL,
@@ -67,7 +69,6 @@ class MT5OMS:
         if order.has_tp():
             order.tp = self.mt5_api.round_price(order["symbol"], order.tp)
         order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
-        print(order.entry, order.sl, order.tp)
         trade = Trade(order, volume)
         print("   [*] create trade, trade_id: {}".format(trade.trade_id))
         order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)

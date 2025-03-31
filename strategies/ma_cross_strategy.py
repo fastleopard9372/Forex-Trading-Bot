@@ -74,7 +74,7 @@ class MACross(BaseStrategy):
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
         # print(self.fast_ma)
-        cnt = 100
+        cnt = 50
         if self.state is None:
             if (
                 self.fast_ma.iloc[-1] > self.slow_ma.iloc[-1]

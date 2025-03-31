@@ -79,11 +79,12 @@ class Trader:
         self.oms = oms
 
     def get_point(self):
-        n = 3
+        n = 10
+        if(self.symbol_name == "USDJPY"): n = 100
         if self.oms:
-            if(self.oms.get_point(self.symbol_name) < 0.00015): return 0.00015*n
             return self.oms.get_point(self.symbol_name) * n
-        return 0.00015*n
+        if(self.symbol_name == "USDJPY"): return 0.001 * n
+        return 0.0001*n
     def create_trade(self, order: Order, volume):
         if self.oms:
             print(
