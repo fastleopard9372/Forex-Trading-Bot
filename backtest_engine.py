@@ -44,7 +44,7 @@ class BackTestEngine:
 
         # Convert data to pandas DataFrame
         df = pd.DataFrame(rates)
-        new_header = ['Open time', 'Open', 'High', 'Low', 'Close', 'Tick Volume', 'Spread', 'Volume']
+        new_header = ['Open time', 'Open', 'High', 'Low', 'Close', 'Tick volume', 'Spread', 'Volume']
         df.columns = new_header
         df['Open time'] = pd.to_datetime(df['Open time'],unit='s')
         return df

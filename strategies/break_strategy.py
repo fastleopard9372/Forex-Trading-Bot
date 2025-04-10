@@ -25,6 +25,10 @@ class BreakStrategy(BaseStrategy):
         self.min_zz_ratio = 0.01 * self.params["min_zz_pct"]
         self.temp = []
 
+        self.long_term_bars = 500  # Number of bars for long-term analysis
+        self.short_term_bars = 50
+
+
     def attach(self, tfs_chart):
         self.tfs_chart = tfs_chart
         self.init_indicators()
@@ -32,10 +36,18 @@ class BreakStrategy(BaseStrategy):
     def init_indicators(self):
         # calculate HA candelstick
         chart = self.tfs_chart[self.tf]
-        self.ma_vol = ta.SMA(chart["Volume"], self.params["ma_vol"])
+        self.ma_vol = ta.SMA(chart["Tick volume"], self.params["ma_vol"])
         self.zz_points = mta.zigzag(chart, self.min_zz_ratio)
         self.init_main_zigzag()
         self.start_trading_time = chart.iloc[-1]["Open time"]
+        
+        # Volume indicators
+        if 'Real volume' in chart.columns:
+            self.volume_sma =  ta.SMA(chart['Real volume'], timeperiod=20)
+            self.volume_ratio =  chart['Real volume'] / self.volume_sma
+        elif 'Tick volume' in chart.columns:
+            self.volume_sma =  ta.SMA(chart['Tick volume'], timeperiod=20)
+            self.volume_ratio =  chart['Tick volume'] / self.volume_sma
 
     def init_main_zigzag(self):
         self.main_zz_idx = []
@@ -116,7 +128,7 @@ class BreakStrategy(BaseStrategy):
         if tf != self.tf:
             return
         chart = self.tfs_chart[self.tf]
-        self.ma_vol.loc[len(self.ma_vol)] = ta.stream.SMA(chart["Volume"], self.params["ma_vol"])
+        self.ma_vol.loc[len(self.ma_vol)] = ta.stream.SMA(chart["Tick volume"], self.params["ma_vol"])
         last_Zz_pidx = self.zz_points[-1].pidx
         mta.zigzag_stream(chart, self.min_zz_ratio, self.zz_points)
         last_main_idx = self.main_zz_idx[-1]
@@ -157,8 +169,8 @@ class BreakStrategy(BaseStrategy):
     def check_signal(self):
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
-            return
+        # if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
+        #     return
         idx = 1
         while idx < len(self.zz_points):
             zz_point_1 = self.zz_points[-idx]
@@ -179,6 +191,8 @@ class BreakStrategy(BaseStrategy):
         for i, kline in n_df.iterrows():
             n_last_poke_points.append((i, kline["Low"]))
             n_last_peak_points.append((i, kline["High"]))
+
+        # print(chart.iloc[self.zz_points[-idx].pidx]["Date"], chart.iloc[self.zz_points[-idx].pidx]["Time"])
         kline_body_pct = n_df[["Open", "Close"]].max(axis=1) - n_df[["Open", "Close"]].min(axis=1)
         mean_kline_body = kline_body_pct.mean()
         if abs(last_kline["Close"] - last_kline["Open"]) < self.params["kline_body_ratio"] * mean_kline_body:
@@ -197,12 +211,13 @@ class BreakStrategy(BaseStrategy):
                 return
             y_down_pct = get_y_on_line(self.down_trend_line, self.down_trend_line[1][0] + 1)
             if last_kline["Close"] > y_down_pct and last_kline["Close"] > ta.stream.SMA(chart["Close"], 200):
+                tp = -2 * (self.up_trend_line[1][1] - last_kline["Close"]) + last_kline["Close"]
                 sl = self.up_trend_line[1][1]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.BUY,
                     last_kline["Close"],
-                    tp=None,
+                    tp=tp,
                     sl=sl,
                     status=OrderStatus.FILLED,
                 )
@@ -224,6 +239,7 @@ class BreakStrategy(BaseStrategy):
             y_up_pct = get_y_on_line(self.up_trend_line, self.up_trend_line[1][0] + 1)
             if last_kline["Close"] < y_up_pct and last_kline["Close"] < ta.stream.SMA(chart["Close"], 200):
                 sl = self.down_trend_line[1][1]
+                tp = -2 * (self.down_trend_line[1][1] - last_kline["Close"]) + last_kline["Close"]
                 order = Order(
                     OrderType.MARKET,
                     OrderSide.SELL,
@@ -248,7 +264,7 @@ class BreakStrategy(BaseStrategy):
         self.check_close_reverse()
         chart = self.tfs_chart[self.tf]
         last_kline = chart.iloc[-1]
-        if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
+        if last_kline["Tick volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
             return
         if last_kline["Close"] < last_kline["Open"]:
             # red kline, check close buy orders
@@ -363,7 +379,7 @@ class BreakStrategy(BaseStrategy):
             font=dict(color="rgb(247,249,249)"),
         )
         df = self.tfs_chart[self.tf]
-        dt2idx = dict(zip(df["Open time"], list(range(len(df)))))
+        dt2idx = dict(zip(chart["Open time"], list(range(len(df)))))
         tmp_ot = df["Open time"]
         df["Open time"] = list(range(len(df)))
         super().plot_orders(fig, self.tf, 1, 1, dt2idx=dt2idx)
@@ -388,7 +404,7 @@ class BreakStrategy(BaseStrategy):
         fig.add_trace(
             go.Scatter(
                 x=df["Open time"],
-                y=ta.SMA(df["Close"], 200),
+                y=ta.SMA(chart["Close"], 200),
                 mode="lines",
                 line=dict(color="orange"),
                 name="SMA_200",
@@ -449,7 +465,7 @@ class BreakStrategy(BaseStrategy):
             "rgb(242, 54, 69)" if kline["Open"] > kline["Close"] else "rgb(8, 153, 129)" for i, kline in df.iterrows()
         ]
         fig.add_trace(
-            go.Bar(x=list(range(len(df))), y=df["Volume"], marker_color=colors, marker_line_width=0, name="Volume"),
+            go.Bar(x=list(range(len(df))), y=df["Tick volume"], marker_color=colors, marker_line_width=0, name="Tick volume"),
             row=2,
             col=1,
         )

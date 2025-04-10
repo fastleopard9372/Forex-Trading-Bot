@@ -1,0 +1,181 @@
+# Trading Bot Configuration Settings
+
+# MT5 Account Settings
+MT5_LOGIN = 12345678  # Your MetaTrader 5 account number
+MT5_PASSWORD = "your_password"  # Your MetaTrader 5 password
+MT5_SERVER = "MetaQuotes-Demo"  # Your broker's server name
+MT5_PATH = ""  # Leave empty for default installation path
+
+# Trading Pairs
+SYMBOLS = ["USDJPY", "EURUSD"]  # Currency pairs to trade
+
+# Risk Management
+RISK_PERCENT = 0.02  # Risk 2% of account balance per trade
+SL_PIPS_DEFAULT = 30  # Default stop loss in pips
+TP_MULTIPLIER_DEFAULT = 2.0  # Default take profit multiplier relative to stop loss
+MAX_SPREAD_PIPS = 3.0  # Maximum allowed spread to enter a trade
+
+# Market Condition Parameters
+VOLATILITY_THRESHOLD = 1.5  # ATR multiplier to identify high volatility
+ADX_THRESHOLD = 25  # ADX above this value indicates a trend
+STRONG_TREND_ADX = 30  # ADX above this value indicates a strong trend
+SIDEWAYS_ADX_MAX = 20  # ADX below this indicates a sideways market
+
+# Trailing Stop Parameters
+TRAILING_STOP_ACTIVATION = 0.5  # Activate trailing stop after price moves in favor by this factor of stop loss
+TRAILING_STOP_DISTANCE = 1.0  # Trailing stop distance as factor of original stop loss
+
+# Trading Bot Time Settings
+RUN_INTERVAL = 120  # Check for new trades every 120 seconds (2 minutes)
+TRADING_HOURS = {
+    "start": "00:00", 
+    "end": "23:59"    
+}
+
+# Trading Days (0 = Monday, 6 = Sunday)
+TRADING_DAYS = [0, 1, 2, 3, 4]  # Only trade on weekdays
+
+# Indicator Settings
+INDICATORS = {
+    "fast_period": 12,
+    "slow_period": 26,
+    "signal_period": 9,
+    
+    "rsi_period": 14,
+    "rsi_overbought": 70,
+    "rsi_oversold": 30,
+    
+    "adx_period": 14,
+    "plus_di_period": 14,
+    "minus_di_period": 14,
+    
+    "atr_period": 14,
+    
+    "bb_period": 20,
+    "bb_std_dev": 2,
+    
+    "cci_period": 14,
+    
+    "stoch_k_period": 14,
+    "stoch_d_period": 3,
+    "stoch_slowing": 3,
+    
+    "sma_50_period": 50,
+    "sma_200_period": 200,
+    
+    "timeframes": {
+        "long_term": "H4",  
+        "medium_term": "H1", 
+        "short_term": "M15", 
+        "execution": "M2"   
+    }
+}
+
+# Trading Strategies
+STRATEGIES = {
+    "trend_following": {
+        "enabled": True,
+        "min_adx": 25,
+        "rsi_buy_below": 45,
+        "rsi_sell_above": 55
+    },
+    
+    "range_trading": {
+        "enabled": True,
+        "max_adx": 20,
+        "bb_deviation_pct": 1.0,
+        "rsi_buy_below": 30,
+        "rsi_sell_above": 70
+    },
+    
+    "momentum_trading": {
+        "enabled": True,
+        "macd_acceleration_factor": 1.1 
+    },
+    
+    "divergence_trading": {
+        "enabled": True,
+        "look_back_periods": 5
+    },
+    
+    "trend_alignment": {
+        "enabled": True
+    },
+    
+    "extremes_reversal": {
+        "enabled": True,
+        "rsi_extreme_buy": 20,
+        "rsi_extreme_sell": 80,
+        "cci_extreme_buy": -100,
+        "cci_extreme_sell": 100
+    }
+}
+
+# Dynamic Exit Conditions
+EXIT_CONDITIONS = {
+    "time_based_exit": {
+        "enabled": True,
+        "default_hours": 24,
+        "range_trading_hours": 4,
+        "momentum_trading_hours": 8,
+        "divergence_trading_hours": 12
+    },
+    
+    "indicator_based_exit": {
+        "enabled": True
+    },
+    
+    "trailing_stop": {
+        "enabled": True,
+        "trend_following_enabled": True,
+        "trend_alignment_enabled": True,
+        "high_volatility_enabled": True
+    }
+}
+
+# Logging Settings
+LOG_LEVEL = "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_TO_FILE = True
+LOG_FILENAME = "trading_bot.log"
+
+# Notification Settings
+SEND_NOTIFICATIONS = False
+EMAIL_SETTINGS = {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "email_address": "your_email@gmail.com",
+    "email_password": "your_app_password",
+    "recipient_email": "your_email@gmail.com"
+}
+
+# Reporting Settings
+REPORTING = {
+    "generate_html_report": True,
+    "html_report_filename": "trading_report.html",
+    "generate_charts": True,
+    "save_trade_history": True,
+    "trade_history_filename": "trade_history.csv"
+}
+
+# Backtest Settings
+BACKTEST = {
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "initial_balance": 10000,
+    "generate_equity_chart": True,
+    "generate_drawdown_chart": True,
+    "generate_strategy_comparison": True,
+    "generate_market_condition_chart": True
+}_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "email_address": "your_email@gmail.com",
+    "email_password": "your_app_password",
+    "recipient_email": "your_email@gmail.com"
+}
+
+# Backtest Settings
+BACKTEST = {
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "initial_balance": 10000
+}

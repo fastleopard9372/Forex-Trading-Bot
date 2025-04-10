@@ -10,6 +10,10 @@ class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
 
+class OrderCloseSide(Enum):
+    BUY_CL = "BUY_CL"
+    SELL_CL = "SELL_CL"
+
 
 class PositionSide(Enum):
     LONG = "LONG"

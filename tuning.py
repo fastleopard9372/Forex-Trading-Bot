@@ -43,7 +43,7 @@ class Tuning:
         #df["Open time"] = pd.to_datetime(df["Open time"])
         #return df
         df = pd.read_csv(csv_data_path, sep='\t')
-        new_header = ['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Tick Volume', 'Volume', 'Spread']
+        new_header = ['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Tick volume', 'Volume', 'Spread']
         df.columns = new_header
         
         df['Open time'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])

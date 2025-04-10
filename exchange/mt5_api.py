@@ -61,8 +61,8 @@ class MT5API:
         df = pd.DataFrame(symbol_rates)
         df["time"] += -time.timezone- self.delta_time()
         df["time"] = pd.to_datetime(df["time"], unit="s")
-        df.columns = ["Open time", "Open", "High", "Low", "Close", "Volume", "Spread", "Real_Volume"]
-        df = df[["Open time", "Open", "High", "Low", "Close", "Volume"]]
+        df.columns = ["Open time", "Open", "High", "Low", "Close", "Tick volume", "Spread", "Real volume"]
+        df = df[["Open time", "Open", "High", "Low", "Close", "Tick volume","Real volume"]]
         return df
     
     def klinesDate(self, symbol: str, interval:str, from_date: datetime, to_date: datetime): 
