@@ -64,36 +64,40 @@ class MT5OMS:
 
     def create_trade(self, order: Order, volume):
         # round tp/sl price
-        if order.has_sl():
-            order.sl = self.mt5_api.round_price(order["symbol"], order.sl)
-        if order.has_tp():
-            order.tp = self.mt5_api.round_price(order["symbol"], order.tp)
-        order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
-        trade = Trade(order, volume)
-        print("   [*] create trade, trade_id: {}".format(trade.trade_id))
-        order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)
-        trade.main_order_params = order_tpl.get_main_order()
-        trade.close_order_params = order_tpl.get_close_order()
-        # update ask/bid price for market order
-        if order.type == OrderType.MARKET:
-            if order.side == OrderSide.BUY:
-                trade.main_order_params["price"] = self.mt5_api.tick_ask_price(order["symbol"])
+        for attempt in range(3):
+            if attempt > 0:
+                time.sleep(1)
+            if order.has_sl():
+                order.sl = self.mt5_api.round_price(order["symbol"], order.sl)
+            if order.has_tp():
+                order.tp = self.mt5_api.round_price(order["symbol"], order.tp)
+            order.entry = self.mt5_api.round_price(order["symbol"], order.entry)
+            trade = Trade(order, volume)
+            print("   [*] create trade, trade_id: {}".format(trade.trade_id))
+            order_tpl = MT5OrderTemplate(order["symbol"], volume, order.entry, order.tp, order.sl, order.side, order.type)
+            trade.main_order_params = order_tpl.get_main_order()
+            trade.close_order_params = order_tpl.get_close_order()
+            # update ask/bid price for market order
+            if order.type == OrderType.MARKET:
+                if order.side == OrderSide.BUY:
+                    trade.main_order_params["price"] = self.mt5_api.tick_ask_price(order["symbol"])
+                else:
+                    trade.main_order_params["price"] = self.mt5_api.tick_bid_price(order["symbol"])
+            trade.main_order_params["comment"] = order["description"]
+            result = self.mt5_api.place_order(trade.main_order_params)
+            result_dict = result._asdict()
+            result_dict["request"] = result_dict["request"]._asdict()
+            trade.main_order = result_dict
+            trade.close_order_params["position"] = result_dict["order"]
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                print("       [+] create main order success")
+                self.active_trades[trade.trade_id] = trade
+                return trade.trade_id
             else:
-                trade.main_order_params["price"] = self.mt5_api.tick_bid_price(order["symbol"])
-        trade.main_order_params["comment"] = order["description"]
-        result = self.mt5_api.place_order(trade.main_order_params)
-        result_dict = result._asdict()
-        result_dict["request"] = result_dict["request"]._asdict()
-        trade.main_order = result_dict
-        trade.close_order_params["position"] = result_dict["order"]
-        if result.retcode == mt5.TRADE_RETCODE_DONE:
-            print("       [+] create main order success")
-            self.active_trades[trade.trade_id] = trade
-            return trade.trade_id
-        else:
-            print("       [+] create main order failed: {}".format(result_dict))
-            self.closed_trades[trade.trade_id] = trade
-            return None
+                print("       [+] create main order failed: {}   Retrying... ".format(result_dict))
+                self.closed_trades[trade.trade_id] = trade
+                continue
+        return None
 
     def get_trade(self, trade_id):
         return self.active_trades.get(trade_id)

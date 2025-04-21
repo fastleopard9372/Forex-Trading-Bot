@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import talib as ta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -172,20 +172,20 @@ class BreakStrategy(BaseStrategy):
         # if last_kline["Volume"] < self.params["vol_ratio_ma"] * self.ma_vol.iloc[-1]:
         #     return
         idx = 1
-        while idx < len(self.zz_points):
-            zz_point_1 = self.zz_points[-idx]
-            zz_point_2 = self.zz_points[-idx - 1]
-            if zz_point_2.ptype == mta.POINT_TYPE.POKE_POINT:
-                change = (zz_point_1.pline.high - zz_point_2.pline.low) / zz_point_2.pline.low
-            else:
-                change = (zz_point_2.pline.high - zz_point_1.pline.low) / zz_point_2.pline.high
-            if change > self.params["zz_dev"] * self.min_zz_ratio:
-                break
-            idx += 1
-
-        n_df = chart[self.zz_points[-idx].pidx : -1]
-        if len(n_df) < self.params["min_num_cuml"]:
-            return
+        # while idx < len(self.zz_points):
+        #     zz_point_1 = self.zz_points[-idx]
+        #     zz_point_2 = self.zz_points[-idx - 1]
+        #     if zz_point_2.ptype == mta.POINT_TYPE.POKE_POINT:
+        #         change = (zz_point_1.pline.high - zz_point_2.pline.low) / zz_point_2.pline.low
+        #     else:
+        #         change = (zz_point_2.pline.high - zz_point_1.pline.low) / zz_point_2.pline.high
+        #     if change > self.params["zz_dev"] * self.min_zz_ratio:
+        #         break
+        #     idx += 1
+        idx = 4
+        n_df = chart[self.zz_points[-1].pidx : -1]
+        print("last_zz_point", chart.iloc[self.zz_points[-1].pidx]["Open time"], chart.iloc[self.zz_points[-1].pidx]["Close"])
+        print(chart.iloc[self.zz_points[self.main_zz_idx[-1]].pidx]["Open time"], chart.iloc[self.zz_points[self.main_zz_idx[-1]].pidx]["Close"])
         n_last_poke_points = []
         n_last_peak_points = []
         for i, kline in n_df.iterrows():
@@ -193,18 +193,22 @@ class BreakStrategy(BaseStrategy):
             n_last_peak_points.append((i, kline["High"]))
 
         # print(chart.iloc[self.zz_points[-idx].pidx]["Date"], chart.iloc[self.zz_points[-idx].pidx]["Time"])
-        kline_body_pct = n_df[["Open", "Close"]].max(axis=1) - n_df[["Open", "Close"]].min(axis=1)
-        mean_kline_body = kline_body_pct.mean()
-        if abs(last_kline["Close"] - last_kline["Open"]) < self.params["kline_body_ratio"] * mean_kline_body:
-            return
+        # kline_body_pct = n_df[["Open", "Close"]].max(axis=1) - n_df[["Open", "Close"]].min(axis=1)
+        # mean_kline_body = kline_body_pct.mean()
+        # if abs(last_kline["Close"] - last_kline["Open"]) < self.params["kline_body_ratio"] * mean_kline_body:
+        #     return
+
         self.up_trend_line = find_uptrend_line(n_last_poke_points)
         self.down_trend_line = find_downtrend_line(n_last_peak_points)
 
         self.up_pct = (self.up_trend_line[1][1] - self.up_trend_line[0][1]) / self.up_trend_line[0][1]
         self.down_pct = (self.down_trend_line[1][1] - self.down_trend_line[0][1]) / self.down_trend_line[0][1]
         delta_end = abs(self.down_trend_line[1][1] - self.up_trend_line[1][1]) / self.up_trend_line[1][1]
-        if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
-            return
+        print("up_pct", self.up_pct)
+        print("down_pct", self.down_pct)
+        print("delta_end", delta_end)
+        # if delta_end > self.params["zz_dev"] * self.min_zz_ratio:
+            # return
         if last_kline["Close"] > last_kline["Open"]:
             # green kkline
             if (last_kline["High"] - last_kline["Close"]) > 0.5 * (last_kline["High"] - last_kline["Low"]):

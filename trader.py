@@ -64,12 +64,13 @@ class Trader:
                 strategy.set_max_sl_pct(strategy_def.get("max_sl_pct"))
                 self.strategies.append(strategy)
                 for tf in strategy_def["tfs"].values():
+                    
                     if tf in self.required_tfs:
                         self.required_tfs[tf].append(strategy)
                     else:
                         self.required_tfs[tf] = [strategy]
             else:
-                print.error(
+                logging.error(
                     "   [-] Load strategy: {}, params {} failed, invalid params".format(
                         strategy_def["name"], strategy_def["params"]
                     )

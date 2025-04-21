@@ -35,7 +35,7 @@ class PriceAction(BaseStrategy):
         chart = self.tfs_chart[self.tf]
         self.ma_vol = ta.SMA(chart["Volume"], self.params["ma_vol"])
         self.zz_points = mta.zigzag(chart, self.min_zz_ratio)
-        self.init_main_zigzag()
+        # self.init_main_zigzag()
         self.start_trading_time = chart.iloc[-1]["Open time"]
 
     def init_main_zigzag(self):
