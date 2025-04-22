@@ -505,6 +505,7 @@ class RsiMacd(BaseStrategy):
         last_kline = chart.iloc[-1]
         
         # Volume filter - ignore low volume periods
+        print("======================",last_kline["Tick volume"])
         if last_kline["Tick volume"] < 50:
             return
             

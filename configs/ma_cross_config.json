@@ -5,13 +5,34 @@
             {
                 "name": "ma_cross",
                 "params": {
-                    "fast_ma": 100,
-                    "slow_ma": 200,
-                    "type": "EMA",
+                    "ma_inputs":{
+                        "fast_ma": 10,
+                        "slow_ma": 20,
+                        "type": "EMA"
+                    },
+                    "atr_inputs":{
+                        "atr_period": 14,
+                        "atr_multiplier": 1.3,
+                        "atr_threshold": 0.04
+                    },
+                    "adx_inputs":{
+                        "adx_period": 14,
+                        "adx_threshold": 25
+                    },
+                    "rsi_inputs":{
+                        "rsi_period": 14,
+                        "ob_rsi": 60,
+                        "os_rsi": 40
+                    },
+                    "macd_inputs":{
+                        "fast": 6,
+                        "slow": 13,
+                        "signal": 5
+                    },
                     "sl_fix_mode": "ADJ_SL"
                 },
                 "tfs": {
-                    "tf": "15m"
+                    "tf": "2m"
                 },
                 "max_sl_pct": 0.25,
                 "volume": 0.01

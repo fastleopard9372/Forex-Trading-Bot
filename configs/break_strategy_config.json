@@ -50,3 +50,67 @@
     ],
     "year": 2023
 }
+
+
+
+
+
+
+
+
+
+
+{
+    "symbol": "EURUSD",
+    "strategies": [
+        {
+            "name": "rsi_macd",
+            "params": {
+                "macd_inputs": {
+                    "fast_len": 12,
+                    "signal": 9,
+                    "slow_len": 26
+                },
+                "rsi_inputs":{
+                    "rsi_len": 14,
+                    "ob_rsi":70,
+                    "os_rsi":30
+                },
+                "ma_inputs":{
+                    "short":10,
+                    "medium":50,
+                    "long":200
+                },
+                "bb_inputs":{
+                    "len":14,
+                    "nbdevup":1.8,
+                    "nbdevdn":1.8
+                },
+                "adx_inputs":{
+                    "len": 14,
+                    "threshold": 25
+                },
+                "atr_inputs":{
+                    "len":14,
+                    "atr_pct":1
+                },
+                "min_num_cuml": 10,
+                "min_zz_pct": 0.1,
+                "zz_dev":2,
+                "ma_vol": 10,
+                "vol_ratio_ma": 0.7,
+                "kline_body_ratio": 0.2,
+                "sl_fix_mode": "ADJ_SL"
+            },
+            "tfs": {
+                "tf": "2m"
+            },
+            "max_sl_pct": 0.2,
+            "volume": 0.02
+        }
+    ],
+    "months": [
+        5
+    ],
+    "year": 2020
+},
