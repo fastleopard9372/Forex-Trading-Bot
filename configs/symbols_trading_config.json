@@ -5,43 +5,92 @@
             {
                 "name": "ma_cross",
                 "params": {
-                    "ma_inputs":{
-                        "fast_ma": 10,
-                        "slow_ma": 20,
-                        "type": "EMA"
+                    "ma_inputs": {
+                        "type": "EMA",
+                        "fast_ma": 9,
+                        "slow_ma": 21
                     },
-                    "atr_inputs":{
+                    "trend_ma_period": 100,
+                    "atr_inputs": {
                         "atr_period": 14,
-                        "atr_multiplier": 1.3,
-                        "atr_threshold": 0.04
+                        "atr_threshold": 0.03
                     },
-                    "adx_inputs":{
+                    "adx_inputs": {
                         "adx_period": 14,
                         "adx_threshold": 25
                     },
-                    "rsi_inputs":{
-                        "rsi_period": 14,
-                        "ob_rsi": 60,
-                        "os_rsi": 40
+                    "rsi_inputs": {
+                        "rsi_period": 10,
+                        "ob_rsi": 70,
+                        "os_rsi": 30
                     },
-                    "macd_inputs":{
+                    "macd_inputs": {
                         "fast": 6,
                         "slow": 13,
                         "signal": 5
                     },
-                    "sl_fix_mode": "ADJ_SL"
+                    "bbands_inputs": {
+                        "bbands_period": 14,
+                        "bbands_dev_up": 1.8,
+                        "bbands_dev_down": 1.8
+                    },
+                    "sl_fix_mode": "percent",
+                    "sl_atr_multiplier": 3.0,
+                    "risk_reward_ratio": 1.5,
+                    "trailing_stop": {
+                        "activation_pct": 2.0,
+                        "atr_multiplier": 3.0
+                    },
+                    "signal_weights": {
+                        "price": 1.0,
+                        "ma": 1.5,
+                        "rsi": 1.0,
+                        "adx": 1.0,
+                        "macd": 1.5,
+                        "volume": 0.5,
+                        "bbands": 0.7
+                    },
+                    "signal_thresholds": {
+                        "buy": 0.6,
+                        "sell": -0.6
+                    },
+                    "regime_detection": {
+                        "adx_trend_threshold": 25,
+                        "volatility_threshold": 0.06
+                    },
+                    "use_mtf": true,
+                    "mtf_weights": {
+                        "1m": 0.2,
+                        "5m": 0.3,
+                        "15m": 0.5,
+                        "1h": 1.0,
+                        "4h": 1.2
+                    },
+                    "max_position_size": 1.0,
+                    "min_position_size": 0.2,
+                    "use_ml": true,
+                    "ml_inputs": {
+                        "model_type": "random_forest",
+                        "max_history": 1000,
+                        "min_trades_to_train": 20,
+                        "train_frequency": 10,
+                        "max_predictions": 100,
+                        "signal_threshold": 0.7,
+                        "ml_weight": 1.5
+                    }
                 },
                 "tfs": {
-                    "tf": "2m"
+                    "tf": "2m",
+                    "15m": "15m",
+                    "1h": "1h"
                 },
                 "max_sl_pct": 0.25,
                 "volume": 0.01
             }
         ],
         "months": [
-            1,
-            2
+            5
         ],
-        "year": 2024
+        "year": 2020
     }
 ]

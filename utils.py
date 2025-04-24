@@ -72,7 +72,7 @@ tf_cron = {
     "1m": {},
 }
 
-NUM_KLINE_INIT = 800
+NUM_KLINE_INIT = 300
 CANDLE_COLUMNS = [
     "Open time",
     "Open",
